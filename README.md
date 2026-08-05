@@ -24,7 +24,24 @@ SHITBot is a Discord bot for coordinating movie nights. It supports:
 5. Open the generated URL and add the bot to your server.
 6. Enable Developer Mode in Discord, then right-click your server and choose **Copy Server ID**.
 
-No privileged gateway intents are required.
+### Required Discord permissions
+
+The installation URL needs these OAuth2 scopes:
+
+- `bot` adds the bot user to the server.
+- `applications.commands` installs its slash commands.
+
+Grant the bot role these permissions:
+
+- **View Channels** lets the bot access the movie-night channel and find channels targeted by its commands.
+- **Send Messages** lets it create movie-night posts, respond to commands, and send command output.
+- **Embed Links** lets it display the formatted movie-night card.
+- **Read Message History** lets it retrieve and update existing movie-night posts after votes, RSVPs, or automatic closure.
+- **Pin Messages** lets it pin and unpin coordination posts.
+- **Send Polls** lets it create native Discord polls.
+- **Create Events** lets it integrate with Discord scheduled events.
+
+Channel-specific permission overrides still apply. Grant these permissions in `#movie-nights` and in any other channel where the bot should be able to send messages. The bot does not need **Administrator**, **Manage Messages**, **Add Reactions**, or any privileged gateway intents.
 
 ## Run locally
 
@@ -49,7 +66,7 @@ Use `/movie-night create`. The `when` field accepts common date/time formats, in
 2026-08-15 19:30-07:00
 ```
 
-A numeric UTC offset is recommended when the bot's host may be in a different timezone.
+Times without an explicit offset use the `TZ` setting from `.env`. Inputs with a numeric UTC offset override that setting.
 
 If `movie` is omitted, suggestion and voting controls appear automatically. The organizer can close voting with **Define movie**.
 
