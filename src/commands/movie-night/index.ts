@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import * as chrono from "chrono-node";
 import {
   ActionRowBuilder,
   MessageFlags,
@@ -15,6 +14,7 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import type { CommandFactory, CommandModule } from "../types.js";
+import { parseMovieNightDate } from "./date-parser.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { renderNight } from "./presentation.js";
 import type { MovieNight, RsvpStatus } from "./types.js";
@@ -29,13 +29,6 @@ const componentActions = new Set([
   "castVote",
   "pickMovie",
 ]);
-
-function parseWhen(input: string): number | null {
-  const result = chrono.parse(input.trim(), new Date(), { forwardDate: true })[0];
-  if (!result) return null;
-  if (!result.start.isCertain("month") || !result.start.isCertain("day") || !result.start.isCertain("hour")) return null;
-  return Math.floor(result.start.date().getTime() / 1000);
-}
 
 function isClosed(night: MovieNight): boolean {
   return Boolean(night.closedAt) || night.startsAt <= Math.floor(Date.now() / 1000);
@@ -65,7 +58,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       return;
     }
 
-    const startsAt = parseWhen(interaction.options.getString("when", true));
+    const startsAt = parseMovieNightDate(interaction.options.getString("when", true), config.timeZone);
     if (!startsAt) {
       await interaction.reply({
         content: "I couldn't understand that date and time. Try `2 october 7pm`, `08/15/2026 19:30`, or `2026-08-15 19:30-07:00`.",

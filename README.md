@@ -8,7 +8,6 @@ SHITBot is a Discord bot for coordinating movie nights. It supports:
 - Organizer-controlled selection of the final movie
 - Organizer-only deletion of movie nights
 - Automatic closing and disabled controls when a movie night starts
-- A `/grease` command that sends `🛢️` to every other text channel, with a persistent global 24-hour cooldown
 - Local JSON persistence across restarts
 
 ## Requirements

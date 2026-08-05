@@ -1,13 +1,13 @@
 import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
 import type { CommandFactory, CommandModule } from "../types.js";
 
-const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
 const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
   return {
     data: new SlashCommandBuilder()
       .setName("grease")
-      .setDescription("Send grease to every other text channel (global 24-hour cooldown)")
+      .setDescription("Send grease to every other text channel (global 30-day cooldown)")
       .toJSON(),
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {

@@ -29,7 +29,10 @@ const commandFactories = await loadCommandFactories();
 const commandContext: CommandContext = {
   client,
   store,
-  config: { movieNightsChannel: process.env.MOVIE_NIGHTS_CHANNEL ?? "movie-nights" },
+  config: {
+    timeZone: process.env.TZ ?? "America/Los_Angeles",
+    movieNightsChannel: process.env.MOVIE_NIGHTS_CHANNEL ?? "movie-nights",
+  },
 };
 const commandModules: CommandModule[] = commandFactories.map((createCommand) => createCommand(commandContext));
 const commandsByName = new Map(commandModules.map((command) => [command.data.name, command]));

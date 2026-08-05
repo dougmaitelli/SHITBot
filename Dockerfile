@@ -13,6 +13,7 @@ FROM node:26-alpine AS runner
 
 ENV NODE_ENV=production
 ENV DATA_FILE=/app/data/movie-nights.json
+ENV TZ=America/Los_Angeles
 
 WORKDIR /app
 

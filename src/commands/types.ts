@@ -10,6 +10,7 @@ export interface CommandContext {
   client: Client;
   store: BotStore;
   config: {
+    timeZone: string;
     movieNightsChannel: string;
   };
 }

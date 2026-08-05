@@ -1,0 +1,12 @@
+services:
+  shitbot:
+    image: ghcr.io/dougmaitelli/shitbot:latest
+    container_name: shitbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - shitbot-data:/app/data
+
+volumes:
+  shitbot-data:
