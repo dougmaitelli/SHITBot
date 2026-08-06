@@ -18,7 +18,6 @@ import { parseMovieNightDate } from "./date-parser.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { renderNight } from "./presentation.js";
 import { createScheduledEvent, deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
-import { migrateExistingMovieNightsToScheduledEvents } from "./temporary-scheduled-event-migration.js";
 import type { MovieNight, RsvpStatus } from "./types.js";
 
 const componentActions = new Set([
@@ -322,8 +321,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       if (interaction.options.getSubcommand() === "create") await createNight(interaction);
     },
     handleInteraction,
-    async onReady(): Promise<void> {
-      await migrateExistingMovieNightsToScheduledEvents(client, store, updateMessage);
+    onReady(): void {
       startExpirationJob(store, updateMessage);
     },
   };
