@@ -1,29 +1,38 @@
-import type { APIEmbedField } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import type { MovieNight, MovieSuggestion } from "./types.js";
 
-const attribution =
-  "\n\n[TMDB](https://www.themoviedb.org/) movie data. This product uses the TMDB API but is not endorsed or certified by TMDB.";
+function isClosed(night: MovieNight): boolean {
+  return Boolean(night.closedAt) || night.startsAt <= Math.floor(Date.now() / 1000);
+}
 
-export function suggestionTitle(suggestion: MovieSuggestion): string {
+function displayTitle(suggestion: MovieSuggestion): string {
   return `${suggestion.title}${suggestion.releaseYear ? ` (${suggestion.releaseYear})` : ""}`;
 }
 
-function renderSuggestion(suggestion: MovieSuggestion): string {
-  const title = suggestionTitle(suggestion);
-  const escapedTitle = title.replace(/([\\[\]])/g, "\\$1");
-  const linkedTitle = suggestion.imdbId
-    ? `[${escapedTitle}](https://www.imdb.com/title/${suggestion.imdbId}/)`
-    : `**${title}**`;
-  return `${linkedTitle} — ${suggestion.voters.length} vote(s) · suggested by <@${suggestion.suggestedBy}>`;
-}
+export function renderSuggestion(night: MovieNight, suggestion: MovieSuggestion) {
+  const embed = new EmbedBuilder()
+    .setColor(0x01b4e4)
+    .setTitle(displayTitle(suggestion).slice(0, 256))
+    .setDescription((suggestion.description || "No description is available for this movie.").slice(0, 4096))
+    .addFields(
+      { name: "Year", value: suggestion.releaseYear?.toString() ?? "Unknown", inline: true },
+      { name: "TMDB rating", value: suggestion.rating ? `${suggestion.rating.toFixed(1)}/10` : "Not rated", inline: true },
+      { name: "Votes", value: suggestion.voters.length.toString(), inline: true },
+      { name: "Suggested by", value: `<@${suggestion.suggestedBy}>`, inline: true },
+    )
+    .setFooter({ text: "This product uses the TMDB API but is not endorsed or certified by TMDB." });
 
-export function buildSuggestionField(night: MovieNight): APIEmbedField {
-  const suggestions = night.suggestions.length
-    ? night.suggestions.map(renderSuggestion).join("\n")
-    : "No suggestions yet. Use **Suggest a movie** to add one.";
+  if (suggestion.imdbId) embed.setURL(`https://www.imdb.com/title/${suggestion.imdbId}/`);
+  if (suggestion.posterUrl) embed.setThumbnail(suggestion.posterUrl);
 
-  return {
-    name: "Movie suggestions",
-    value: `${suggestions.slice(0, 1024 - attribution.length)}${attribution}`,
-  };
+  const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`deleteSuggestion:${night.id}:${suggestion.id}`)
+      .setLabel("Delete suggestion")
+      .setEmoji("🗑️")
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(isClosed(night)),
+  );
+
+  return { embeds: [embed], components: [buttons] };
 }

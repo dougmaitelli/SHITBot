@@ -4,6 +4,13 @@ export interface MovieMatch {
   releaseYear?: number;
 }
 
+export interface MovieDetails extends MovieMatch {
+  imdbId?: string;
+  description?: string;
+  posterUrl?: string;
+  rating?: number;
+}
+
 interface SearchMovieResult {
   id?: unknown;
   title?: unknown;
@@ -16,6 +23,16 @@ interface SearchMovieResponse {
 
 interface ExternalIdsResponse {
   imdb_id?: unknown;
+}
+
+interface MovieDetailsResponse {
+  id?: unknown;
+  title?: unknown;
+  release_date?: unknown;
+  overview?: unknown;
+  poster_path?: unknown;
+  vote_average?: unknown;
+  external_ids?: ExternalIdsResponse;
 }
 
 export class TmdbClient {
@@ -46,13 +63,33 @@ export class TmdbClient {
       });
   }
 
-  async getImdbId(tmdbId: number): Promise<string | undefined> {
-    const response = await this.request<ExternalIdsResponse>(
-      new URL(`https://api.themoviedb.org/3/movie/${tmdbId}/external_ids`),
-    );
-    return typeof response.imdb_id === "string" && /^tt\d+$/.test(response.imdb_id)
-      ? response.imdb_id
-      : undefined;
+  async getMovieDetails(tmdbId: number): Promise<MovieDetails> {
+    const url = new URL(`https://api.themoviedb.org/3/movie/${tmdbId}`);
+    url.searchParams.set("append_to_response", "external_ids");
+    url.searchParams.set("language", "en-US");
+    const response = await this.request<MovieDetailsResponse>(url);
+    if (typeof response.id !== "number" || typeof response.title !== "string") {
+      throw new Error("TMDB returned invalid movie details");
+    }
+
+    const releaseYear =
+      typeof response.release_date === "string" ? Number(response.release_date.slice(0, 4)) : NaN;
+    const imdbId = response.external_ids?.imdb_id;
+    return {
+      tmdbId: response.id,
+      title: response.title,
+      releaseYear: Number.isInteger(releaseYear) && releaseYear > 0 ? releaseYear : undefined,
+      imdbId: typeof imdbId === "string" && /^tt\d+$/.test(imdbId) ? imdbId : undefined,
+      description: typeof response.overview === "string" && response.overview.trim() ? response.overview : undefined,
+      posterUrl:
+        typeof response.poster_path === "string"
+          ? `https://image.tmdb.org/t/p/w500${response.poster_path}`
+          : undefined,
+      rating:
+        typeof response.vote_average === "number" && Number.isFinite(response.vote_average)
+          ? response.vote_average
+          : undefined,
+    };
   }
 
   private async request<T>(url: URL): Promise<T> {

@@ -6,6 +6,10 @@ export interface MovieSuggestion {
   releaseYear?: number;
   tmdbId?: number;
   imdbId?: string;
+  description?: string;
+  posterUrl?: string;
+  rating?: number;
+  messageId?: string;
   suggestedBy: string;
   voters: string[];
 }

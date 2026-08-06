@@ -37,14 +37,41 @@ describe("TmdbClient", () => {
     ]);
   });
 
-  it("returns a valid IMDb ID", async () => {
-    const client = new TmdbClient("token", (async () => jsonResponse({ imdb_id: "tt0078748" })) as typeof fetch);
-    assert.equal(await client.getImdbId(348), "tt0078748");
+  it("returns normalized movie details", async () => {
+    let requestedUrl: URL | undefined;
+    const client = new TmdbClient("token", (async (input) => {
+      requestedUrl = new URL(input.toString());
+      return jsonResponse({
+        id: 348,
+        title: "Alien",
+        release_date: "1979-05-25",
+        overview: "In space no one can hear you scream.",
+        poster_path: "/poster.jpg",
+        vote_average: 8.2,
+        external_ids: { imdb_id: "tt0078748" },
+      });
+    }) as typeof fetch);
+
+    assert.deepEqual(await client.getMovieDetails(348), {
+      tmdbId: 348,
+      title: "Alien",
+      releaseYear: 1979,
+      imdbId: "tt0078748",
+      description: "In space no one can hear you scream.",
+      posterUrl: "https://image.tmdb.org/t/p/w500/poster.jpg",
+      rating: 8.2,
+    });
+    assert.equal(requestedUrl?.pathname, "/3/movie/348");
+    assert.equal(requestedUrl?.searchParams.get("append_to_response"), "external_ids");
   });
 
   it("ignores malformed IMDb IDs", async () => {
-    const client = new TmdbClient("token", (async () => jsonResponse({ imdb_id: "not-an-imdb-id" })) as typeof fetch);
-    assert.equal(await client.getImdbId(348), undefined);
+    const client = new TmdbClient("token", (async () => jsonResponse({
+      id: 348,
+      title: "Alien",
+      external_ids: { imdb_id: "not-an-imdb-id" },
+    })) as typeof fetch);
+    assert.equal((await client.getMovieDetails(348)).imdbId, undefined);
   });
 
   it("throws when TMDB returns an error", async () => {

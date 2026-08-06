@@ -17,8 +17,9 @@ import type { CommandFactory, CommandModule } from "../types.js";
 import { parseDate } from "../../utils/date-parser.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { renderNight } from "./night-render.js";
+import { renderSuggestion } from "./suggestion-render.js";
 import { createScheduledEvent, deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
-import { TmdbClient, type MovieMatch } from "./tmdb.js";
+import { TmdbClient, type MovieDetails, type MovieMatch } from "./tmdb.js";
 import type { MovieNight, MovieSuggestion, RsvpStatus } from "./types.js";
 
 const MAX_SUGGESTIONS = 25;
@@ -33,6 +34,7 @@ const componentActions = new Set([
   "movieMatch",
   "castVote",
   "pickMovie",
+  "deleteSuggestion",
 ]);
 
 function isClosed(night: MovieNight): boolean {
@@ -54,6 +56,47 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     if (!channel?.isTextBased() || channel.isDMBased()) return;
     const message = await channel.messages.fetch(night.messageId);
     await message.edit(renderNight(night));
+  }
+
+  async function getNightChannel(night: MovieNight) {
+    const channel = await client.channels.fetch(night.channelId);
+    return channel?.isTextBased() && !channel.isDMBased() ? channel : undefined;
+  }
+
+  async function sendSuggestionCard(night: MovieNight, suggestion: MovieSuggestion): Promise<string> {
+    const channel = await getNightChannel(night);
+    if (!channel) throw new Error(`Could not find text channel ${night.channelId}`);
+    const message = await channel.send(renderSuggestion(night, suggestion));
+    return message.id;
+  }
+
+  async function updateSuggestionCard(night: MovieNight, suggestion: MovieSuggestion): Promise<void> {
+    if (!suggestion.messageId) return;
+    const channel = await getNightChannel(night);
+    if (!channel) return;
+    const message = await channel.messages.fetch(suggestion.messageId);
+    await message.edit(renderSuggestion(night, suggestion));
+  }
+
+  async function updateSuggestionCards(night: MovieNight): Promise<void> {
+    await Promise.allSettled(night.suggestions.map((suggestion) => updateSuggestionCard(night, suggestion)));
+  }
+
+  async function updateNightMessages(night: MovieNight): Promise<void> {
+    await updateMessage(night);
+    await updateSuggestionCards(night);
+  }
+
+  async function deleteSuggestionCard(night: MovieNight, suggestion: MovieSuggestion): Promise<void> {
+    if (!suggestion.messageId) return;
+    const channel = await getNightChannel(night);
+    if (!channel) return;
+    const message = await channel.messages.fetch(suggestion.messageId);
+    await message.delete();
+  }
+
+  async function deleteSuggestionCards(night: MovieNight): Promise<void> {
+    await Promise.allSettled(night.suggestions.map((suggestion) => deleteSuggestionCard(night, suggestion)));
   }
 
   async function createNight(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -165,14 +208,22 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     if (isDuplicateSuggestion(night, suggestion)) {
       return "duplicate";
     }
-    night.suggestions.push({
+    const savedSuggestion: MovieSuggestion = {
       id: randomUUID().slice(0, 8),
       ...suggestion,
       suggestedBy: userId,
       voters: [],
-    });
-    await store.set(night);
-    await updateMessage(night);
+    };
+    savedSuggestion.messageId = await sendSuggestionCard(night, savedSuggestion);
+    night.suggestions.push(savedSuggestion);
+    try {
+      await store.set(night);
+      await updateMessage(night);
+    } catch (error) {
+      night.suggestions = night.suggestions.filter((item) => item.id !== savedSuggestion.id);
+      await deleteSuggestionCard(night, savedSuggestion).catch(() => undefined);
+      throw error;
+    }
     return "added";
   }
 
@@ -268,16 +319,27 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       return;
     }
 
-    let imdbId: string | undefined;
+    let details: MovieDetails | undefined;
     try {
-      imdbId = await tmdb.getImdbId(match.tmdbId);
+      details = await tmdb.getMovieDetails(match.tmdbId);
     } catch (error) {
-      console.error(`Could not get IMDb ID for TMDB movie ${match.tmdbId}`, error);
+      console.error(`Could not get details for TMDB movie ${match.tmdbId}`, error);
     }
-    const displayTitle = `${match.title}${match.releaseYear ? ` (${match.releaseYear})` : ""}`;
+    const selected = details ?? match;
+    const displayTitle = `${selected.title}${selected.releaseYear ? ` (${selected.releaseYear})` : ""}`;
     const result = await saveSuggestion(
       night,
-      { title: match.title, releaseYear: match.releaseYear, tmdbId: match.tmdbId, imdbId },
+      {
+        title: selected.title,
+        releaseYear: selected.releaseYear,
+        tmdbId: selected.tmdbId,
+        ...(details && {
+          imdbId: details.imdbId,
+          description: details.description,
+          posterUrl: details.posterUrl,
+          rating: details.rating,
+        }),
+      },
       interaction.user.id,
     );
     await interaction.editReply({ content: saveResultMessage(result, displayTitle), components: [] });
@@ -326,6 +388,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     selected.voters.push(interaction.user.id);
     await store.set(night);
     await updateMessage(night);
+    await updateSuggestionCards(night);
     await interaction.update({ content: `Your vote is now for **${selected.title}**.`, components: [] });
   }
 
@@ -357,7 +420,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     await updateScheduledEventMovie(client, night).catch((error) =>
       console.error(`Could not update scheduled event ${night.scheduledEventId}`, error),
     );
-    await updateMessage(night);
+    await updateNightMessages(night);
     await interaction.update({ content: `The movie is **${winner.title}**. Voting is now closed.`, components: [] });
   }
 
@@ -370,7 +433,33 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     await deleteScheduledEvent(client, night).catch((error) =>
       console.error(`Could not delete scheduled event ${night.scheduledEventId}`, error),
     );
+    await deleteSuggestionCards(night);
     await store.delete(night.id);
+    await interaction.message.delete();
+  }
+
+  async function deleteSuggestion(
+    interaction: ButtonInteraction,
+    night: MovieNight,
+    suggestionId: string | undefined,
+  ): Promise<void> {
+    const suggestion = night.suggestions.find((item) => item.id === suggestionId);
+    if (!suggestion) {
+      await interaction.reply({ content: "That suggestion no longer exists.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+    if (interaction.user.id !== suggestion.suggestedBy && interaction.user.id !== night.creatorId) {
+      await interaction.reply({
+        content: "Only the person who suggested this movie or the movie night's organizer can delete it.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await interaction.deferUpdate();
+    night.suggestions = night.suggestions.filter((item) => item.id !== suggestion.id);
+    await store.set(night);
+    await updateMessage(night);
     await interaction.message.delete();
   }
 
@@ -388,7 +477,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       if (!night.closedAt) {
         night.closedAt = Date.now();
         await store.set(night);
-        await updateMessage(night).catch(() => undefined);
+        await updateNightMessages(night).catch(() => undefined);
       }
       await interaction.reply({ content: "This movie night has started and is no longer editable.", flags: MessageFlags.Ephemeral });
       return true;
@@ -401,6 +490,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       else if (action === "vote") await showVoteMenu(interaction, night);
       else if (action === "finalize") await showFinalizeMenu(interaction, night);
       else if (action === "delete") await deleteNight(interaction, night);
+      else if (action === "deleteSuggestion") await deleteSuggestion(interaction, night, value);
     } else if (interaction.isModalSubmit() && action === "suggestModal") await addSuggestion(interaction, night);
     else if (interaction.isStringSelectMenu() && action === "movieMatch") await chooseMovieMatch(interaction, night, value);
     else if (interaction.isStringSelectMenu() && action === "castVote") await castVote(interaction, night);
@@ -451,7 +541,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     },
     handleInteraction,
     onReady(): void {
-      startExpirationJob(store, updateMessage);
+      startExpirationJob(store, updateNightMessages);
     },
   };
 };

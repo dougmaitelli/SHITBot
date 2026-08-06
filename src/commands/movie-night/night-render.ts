@@ -5,7 +5,7 @@ import {
   EmbedBuilder,
   type APIEmbedField,
 } from "discord.js";
-import { buildSuggestionField } from "./suggestion-render.js";
+import { buildSuggestionField } from "./suggestion-search-render.js";
 import type { MovieNight, RsvpStatus } from "./types.js";
 
 const labels: Record<RsvpStatus, string> = { yes: "Going", maybe: "Maybe", no: "Can't go" };
