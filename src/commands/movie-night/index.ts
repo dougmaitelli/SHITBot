@@ -377,18 +377,32 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       await interaction.update({ content: "Movie voting has closed.", components: [] });
       return;
     }
-    for (const suggestion of night.suggestions) {
-      suggestion.voters = suggestion.voters.filter((id) => id !== interaction.user.id);
-    }
     const selected = night.suggestions.find((item) => item.id === interaction.values[0]);
     if (!selected) {
       await interaction.update({ content: "That suggestion no longer exists.", components: [] });
       return;
     }
+
+    const previousSelections = night.suggestions.filter((suggestion) =>
+      suggestion.voters.includes(interaction.user.id),
+    );
+    if (previousSelections.length === 1 && previousSelections[0]?.id === selected.id) {
+      await interaction.update({ content: `Your vote is already for **${selected.title}**.`, components: [] });
+      return;
+    }
+
+    for (const suggestion of previousSelections) {
+      suggestion.voters = suggestion.voters.filter((id) => id !== interaction.user.id);
+    }
     selected.voters.push(interaction.user.id);
     await store.set(night);
     await updateMessage(night);
-    await updateSuggestionCards(night);
+    const changedSuggestions = new Map(
+      [...previousSelections, selected].map((suggestion) => [suggestion.id, suggestion]),
+    );
+    await Promise.allSettled(
+      [...changedSuggestions.values()].map((suggestion) => updateSuggestionCard(night, suggestion)),
+    );
     await interaction.update({ content: `Your vote is now for **${selected.title}**.`, components: [] });
   }
 
