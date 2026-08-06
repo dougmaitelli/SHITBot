@@ -40,6 +40,7 @@ Grant the bot role these permissions:
 - **Pin Messages** lets it pin and unpin coordination posts.
 - **Send Polls** lets it create native Discord polls.
 - **Create Events** lets it integrate with Discord scheduled events.
+- **Mention Everyone** lets it notify `@everyone`, `@here`, and otherwise non-mentionable roles when coordination requires it.
 
 Channel-specific permission overrides still apply. Grant these permissions in `#movie-nights` and in any other channel where the bot should be able to send messages. The bot does not need **Administrator**, **Manage Messages**, **Add Reactions**, or any privileged gateway intents.
 
