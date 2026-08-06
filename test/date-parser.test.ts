@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseMovieNightDate } from "../src/commands/movie-night/date-parser.js";
+import { parseDate } from "../src/utils/date-parser.js";
 
 const referenceDate = new Date("2026-08-05T12:00:00.000Z");
 const losAngeles = "America/Los_Angeles";
 
 function parse(input: string, timeZone = losAngeles): Date | null {
-  const timestamp = parseMovieNightDate(input, timeZone, referenceDate);
+  const timestamp = parseDate(input, timeZone, referenceDate);
   return timestamp === null ? null : new Date(timestamp * 1000);
 }
 
-describe("parseMovieNightDate", () => {
+describe("parseDate", () => {
   it("interprets a natural-language time in the configured timezone", () => {
     assert.equal(parse("6 august 6pm")?.toISOString(), "2026-08-07T01:00:00.000Z");
   });

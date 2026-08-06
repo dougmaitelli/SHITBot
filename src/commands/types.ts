@@ -12,6 +12,7 @@ export interface CommandContext {
   config: {
     timeZone: string;
     movieNightsChannel: string;
+    tmdbApiToken: string;
   };
 }
 

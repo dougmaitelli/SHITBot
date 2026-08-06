@@ -1,6 +1,8 @@
 import type { BotStore } from "../../store.js";
 import type { MovieNight } from "./types.js";
 
+const EXPIRATION_CHECK_INTERVAL_MS = 30_000;
+
 type UpdateNightMessage = (night: MovieNight) => Promise<void>;
 
 export async function closeExpiredMovieNights(store: BotStore, updateMessage: UpdateNightMessage): Promise<void> {
@@ -23,5 +25,5 @@ export function startExpirationJob(store: BotStore, updateMessage: UpdateNightMe
     );
 
   run();
-  return setInterval(run, 30_000);
+  return setInterval(run, EXPIRATION_CHECK_INTERVAL_MS);
 }

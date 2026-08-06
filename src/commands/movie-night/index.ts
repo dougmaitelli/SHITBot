@@ -14,11 +14,14 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import type { CommandFactory, CommandModule } from "../types.js";
-import { parseMovieNightDate } from "./date-parser.js";
+import { parseDate } from "../../utils/date-parser.js";
 import { startExpirationJob } from "./expiration-job.js";
-import { renderNight } from "./presentation.js";
+import { renderNight } from "./night-render.js";
 import { createScheduledEvent, deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
-import type { MovieNight, RsvpStatus } from "./types.js";
+import { TmdbClient, type MovieMatch } from "./tmdb.js";
+import type { MovieNight, MovieSuggestion, RsvpStatus } from "./types.js";
+
+const MAX_SUGGESTIONS = 25;
 
 const componentActions = new Set([
   "rsvp",
@@ -27,6 +30,7 @@ const componentActions = new Set([
   "finalize",
   "delete",
   "suggestModal",
+  "movieMatch",
   "castVote",
   "pickMovie",
 ]);
@@ -37,6 +41,13 @@ function isClosed(night: MovieNight): boolean {
 
 const createMovieNightCommand: CommandFactory = ({ client, store, config }): CommandModule => {
   const channelName = config.movieNightsChannel.replace(/^#/, "");
+  const tmdb = new TmdbClient(config.tmdbApiToken);
+  const pendingMatches = new Map<string, {
+    nightId: string;
+    userId: string;
+    query: string;
+    matches: MovieMatch[];
+  }>();
 
   async function updateMessage(night: MovieNight): Promise<void> {
     const channel = await client.channels.fetch(night.channelId);
@@ -59,7 +70,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       return;
     }
 
-    const startsAt = parseMovieNightDate(interaction.options.getString("when", true), config.timeZone);
+    const startsAt = parseDate(interaction.options.getString("when", true), config.timeZone);
     if (!startsAt) {
       await interaction.reply({
         content: "I couldn't understand that date and time. Try `2 october 7pm`, `08/15/2026 19:30`, or `2026-08-15 19:30-07:00`.",
@@ -135,24 +146,141 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     await interaction.showModal(modal);
   }
 
+  function isDuplicateSuggestion(night: MovieNight, suggestion: Pick<MovieSuggestion, "title" | "tmdbId">): boolean {
+    return night.suggestions.some((item) =>
+      suggestion.tmdbId !== undefined && item.tmdbId !== undefined
+        ? suggestion.tmdbId === item.tmdbId
+        : item.title.localeCompare(suggestion.title, undefined, { sensitivity: "accent" }) === 0,
+    );
+  }
+
+  async function saveSuggestion(
+    night: MovieNight,
+    suggestion: Omit<MovieSuggestion, "id" | "suggestedBy" | "voters">,
+    userId: string,
+  ): Promise<"added" | "duplicate" | "full"> {
+    if (night.suggestions.length >= MAX_SUGGESTIONS) {
+      return "full";
+    }
+    if (isDuplicateSuggestion(night, suggestion)) {
+      return "duplicate";
+    }
+    night.suggestions.push({
+      id: randomUUID().slice(0, 8),
+      ...suggestion,
+      suggestedBy: userId,
+      voters: [],
+    });
+    await store.set(night);
+    await updateMessage(night);
+    return "added";
+  }
+
+  function saveResultMessage(result: "added" | "duplicate" | "full", title: string): string {
+    if (result === "full") return `The ballot already has the maximum of ${MAX_SUGGESTIONS} suggestions.`;
+    if (result === "duplicate") return "That movie has already been suggested. You can vote for it instead.";
+    return `Added **${title}** to the ballot.`;
+  }
+
   async function addSuggestion(interaction: ModalSubmitInteraction, night: MovieNight): Promise<void> {
-    const title = interaction.fields.getTextInputValue("title").trim();
+    const query = interaction.fields.getTextInputValue("title").trim();
     if (!night.votingOpen) {
       await interaction.reply({ content: "Movie voting has closed.", flags: MessageFlags.Ephemeral });
       return;
     }
-    if (night.suggestions.length >= 25) {
-      await interaction.reply({ content: "The ballot already has the maximum of 25 suggestions.", flags: MessageFlags.Ephemeral });
+    if (night.suggestions.length >= MAX_SUGGESTIONS) {
+      await interaction.reply({
+        content: `The ballot already has the maximum of ${MAX_SUGGESTIONS} suggestions.`,
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
-    if (night.suggestions.some((item) => item.title.localeCompare(title, undefined, { sensitivity: "accent" }) === 0)) {
-      await interaction.reply({ content: "That movie has already been suggested. You can vote for it instead.", flags: MessageFlags.Ephemeral });
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    let matches: MovieMatch[];
+    try {
+      matches = await tmdb.searchMovies(query);
+    } catch (error) {
+      console.error("Could not search TMDB", error);
+      const result = await saveSuggestion(night, { title: query }, interaction.user.id);
+      await interaction.editReply(`${saveResultMessage(result, query)} TMDB search was unavailable, so I kept the title as entered.`);
       return;
     }
-    night.suggestions.push({ id: randomUUID().slice(0, 8), title, suggestedBy: interaction.user.id, voters: [] });
-    await store.set(night);
-    await updateMessage(night);
-    await interaction.reply({ content: `Added **${title}** to the ballot.`, flags: MessageFlags.Ephemeral });
+
+    if (matches.length === 0) {
+      const result = await saveSuggestion(night, { title: query }, interaction.user.id);
+      await interaction.editReply(`${saveResultMessage(result, query)} I couldn't find a matching movie on TMDB.`);
+      return;
+    }
+
+    const token = randomUUID().slice(0, 8);
+    pendingMatches.set(token, { nightId: night.id, userId: interaction.user.id, query, matches });
+    const expiration = setTimeout(() => pendingMatches.delete(token), 10 * 60_000);
+    expiration.unref();
+
+    const options = matches.map((match) => ({
+      label: `${match.title}${match.releaseYear ? ` (${match.releaseYear})` : ""}`.slice(0, 100),
+      value: `tmdb:${match.tmdbId}`,
+      description: "Use this TMDB match",
+    }));
+    options.push({
+      label: `Use “${query}”`.slice(0, 100),
+      value: "raw",
+      description: "Keep the title exactly as entered",
+    });
+
+    const menu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`movieMatch:${night.id}:${token}`)
+        .setPlaceholder("Choose the intended movie")
+        .addOptions(options),
+    );
+    await interaction.editReply({
+      content: "Choose the intended movie. Movie data provided by [TMDB](https://www.themoviedb.org/).",
+      components: [menu],
+    });
+  }
+
+  async function chooseMovieMatch(
+    interaction: StringSelectMenuInteraction,
+    night: MovieNight,
+    token: string | undefined,
+  ): Promise<void> {
+    const pending = token ? pendingMatches.get(token) : undefined;
+    if (!pending || pending.nightId !== night.id || pending.userId !== interaction.user.id) {
+      await interaction.update({ content: "This movie search has expired. Please suggest the movie again.", components: [] });
+      return;
+    }
+    pendingMatches.delete(token!);
+    await interaction.deferUpdate();
+
+    const selectedValue = interaction.values[0];
+    if (selectedValue === "raw") {
+      const result = await saveSuggestion(night, { title: pending.query }, interaction.user.id);
+      await interaction.editReply({ content: saveResultMessage(result, pending.query), components: [] });
+      return;
+    }
+
+    const tmdbId = Number(selectedValue?.replace(/^tmdb:/, ""));
+    const match = pending.matches.find((candidate) => candidate.tmdbId === tmdbId);
+    if (!match) {
+      await interaction.editReply({ content: "That movie match is no longer available.", components: [] });
+      return;
+    }
+
+    let imdbId: string | undefined;
+    try {
+      imdbId = await tmdb.getImdbId(match.tmdbId);
+    } catch (error) {
+      console.error(`Could not get IMDb ID for TMDB movie ${match.tmdbId}`, error);
+    }
+    const displayTitle = `${match.title}${match.releaseYear ? ` (${match.releaseYear})` : ""}`;
+    const result = await saveSuggestion(
+      night,
+      { title: match.title, releaseYear: match.releaseYear, tmdbId: match.tmdbId, imdbId },
+      interaction.user.id,
+    );
+    await interaction.editReply({ content: saveResultMessage(result, displayTitle), components: [] });
   }
 
   function suggestionMenu(night: MovieNight, customId: string, placeholder: string) {
@@ -161,8 +289,8 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
         .setCustomId(customId)
         .setPlaceholder(placeholder)
         .addOptions(
-          night.suggestions.slice(0, 25).map((item) => ({
-            label: item.title,
+          night.suggestions.slice(0, MAX_SUGGESTIONS).map((item) => ({
+            label: `${item.title}${item.releaseYear ? ` (${item.releaseYear})` : ""}`.slice(0, 100),
             value: item.id,
             description: `${item.voters.length} vote(s)`,
           })),
@@ -223,7 +351,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       await interaction.update({ content: "That suggestion no longer exists.", components: [] });
       return;
     }
-    night.movie = winner.title;
+    night.movie = `${winner.title}${winner.releaseYear ? ` (${winner.releaseYear})` : ""}`;
     night.votingOpen = false;
     await store.set(night);
     await updateScheduledEventMovie(client, night).catch((error) =>
@@ -274,6 +402,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       else if (action === "finalize") await showFinalizeMenu(interaction, night);
       else if (action === "delete") await deleteNight(interaction, night);
     } else if (interaction.isModalSubmit() && action === "suggestModal") await addSuggestion(interaction, night);
+    else if (interaction.isStringSelectMenu() && action === "movieMatch") await chooseMovieMatch(interaction, night, value);
     else if (interaction.isStringSelectMenu() && action === "castVote") await castVote(interaction, night);
     else if (interaction.isStringSelectMenu() && action === "pickMovie") await pickMovie(interaction, night);
     return true;

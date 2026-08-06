@@ -43,7 +43,7 @@ function explicitOffsetMinutes(input: string): number | null {
   return sign === "-" ? -offset : offset;
 }
 
-export function parseMovieNightDate(input: string, timeZone: string, now = new Date()): number | null {
+export function parseDate(input: string, timeZone: string, now = new Date()): number | null {
   // This also validates the configured IANA timezone and throws a clear RangeError if it is invalid.
   const currentOffsetMinutes = timeZoneOffsetMilliseconds(timeZone, now) / 60_000;
   const result = chrono.parse(input.trim(), { instant: now, timezone: currentOffsetMinutes }, { forwardDate: true })[0];

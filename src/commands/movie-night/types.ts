@@ -3,6 +3,9 @@ export type RsvpStatus = "yes" | "maybe" | "no";
 export interface MovieSuggestion {
   id: string;
   title: string;
+  releaseYear?: number;
+  tmdbId?: number;
+  imdbId?: string;
   suggestedBy: string;
   voters: string[];
 }

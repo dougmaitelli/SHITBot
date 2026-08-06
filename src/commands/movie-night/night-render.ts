@@ -5,6 +5,7 @@ import {
   EmbedBuilder,
   type APIEmbedField,
 } from "discord.js";
+import { buildSuggestionField } from "./suggestion-render.js";
 import type { MovieNight, RsvpStatus } from "./types.js";
 
 const labels: Record<RsvpStatus, string> = { yes: "Going", maybe: "Maybe", no: "Can't go" };
@@ -27,18 +28,6 @@ function buildRsvpFields(night: MovieNight): APIEmbedField[] {
     value: mentions(night, status),
     inline: true,
   }));
-}
-
-function buildSuggestionField(night: MovieNight): APIEmbedField {
-  return {
-    name: "Movie suggestions",
-    value: night.suggestions.length
-      ? night.suggestions
-          .map((suggestion) => `**${suggestion.title}** — ${suggestion.voters.length} vote(s) · suggested by <@${suggestion.suggestedBy}>`)
-          .join("\n")
-          .slice(0, 1024)
-      : "No suggestions yet. Use **Suggest a movie** to add one.",
-  };
 }
 
 function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {

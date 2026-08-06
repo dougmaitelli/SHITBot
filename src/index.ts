@@ -32,6 +32,7 @@ const commandContext: CommandContext = {
   config: {
     timeZone: process.env.TZ ?? "America/Los_Angeles",
     movieNightsChannel: process.env.MOVIE_NIGHTS_CHANNEL ?? "movie-nights",
+    tmdbApiToken: requiredEnv("TMDB_API_TOKEN"),
   },
 };
 const commandModules: CommandModule[] = commandFactories.map((createCommand) => createCommand(commandContext));
