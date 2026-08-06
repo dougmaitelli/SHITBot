@@ -43,6 +43,13 @@ function buildSuggestionField(night: MovieNight): APIEmbedField {
 
 function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
   const activityFields = buildRsvpFields(night);
+  if (night.scheduledEventId) {
+    activityFields.unshift({
+      name: "Discord event",
+      value: `[View event](https://discord.com/events/${night.guildId}/${night.scheduledEventId})`,
+      inline: true,
+    });
+  }
   if (night.votingOpen) activityFields.push(buildSuggestionField(night));
 
   return new EmbedBuilder()

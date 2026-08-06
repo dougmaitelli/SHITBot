@@ -17,6 +17,8 @@ import type { CommandFactory, CommandModule } from "../types.js";
 import { parseMovieNightDate } from "./date-parser.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { renderNight } from "./presentation.js";
+import { createScheduledEvent, deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
+import { migrateExistingMovieNightsToScheduledEvents } from "./temporary-scheduled-event-migration.js";
 import type { MovieNight, RsvpStatus } from "./types.js";
 
 const componentActions = new Set([
@@ -87,11 +89,29 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       createdAt: Date.now(),
     };
 
-    const response = await interaction.reply({ ...renderNight(night), withResponse: true });
-    const message = response.resource?.message;
-    if (!message) throw new Error("Discord did not return the created movie-night message");
-    night.messageId = message.id;
-    await store.set(night);
+    const durationMinutes = interaction.options.getInteger("duration") ?? 180;
+    await interaction.deferReply();
+    try {
+      night.scheduledEventId = await createScheduledEvent(interaction.guild, night, durationMinutes);
+    } catch (error) {
+      console.error("Could not create Discord scheduled event", error);
+      await interaction.deleteReply().catch(() => undefined);
+      await interaction.followUp({
+        content: "I couldn't create the Discord event. Check that I have the **Create Events** permission.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    try {
+      const message = await interaction.editReply(renderNight(night));
+      night.messageId = message.id;
+      await store.set(night);
+    } catch (error) {
+      await deleteScheduledEvent(client, night).catch(() => undefined);
+      await interaction.deleteReply().catch(() => undefined);
+      throw error;
+    }
   }
 
   async function handleRsvp(interaction: ButtonInteraction, night: MovieNight, status: RsvpStatus): Promise<void> {
@@ -207,6 +227,9 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     night.movie = winner.title;
     night.votingOpen = false;
     await store.set(night);
+    await updateScheduledEventMovie(client, night).catch((error) =>
+      console.error(`Could not update scheduled event ${night.scheduledEventId}`, error),
+    );
     await updateMessage(night);
     await interaction.update({ content: `The movie is **${winner.title}**. Voting is now closed.`, components: [] });
   }
@@ -217,6 +240,9 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       return;
     }
     await interaction.deferUpdate();
+    await deleteScheduledEvent(client, night).catch((error) =>
+      console.error(`Could not delete scheduled event ${night.scheduledEventId}`, error),
+    );
     await store.delete(night.id);
     await interaction.message.delete();
   }
@@ -281,6 +307,13 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
               .setName("movie")
               .setDescription("Movie title; omit it to let people suggest and vote")
               .setMaxLength(100),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("duration")
+              .setDescription("Duration in minutes (default: 180)")
+              .setMinValue(30)
+              .setMaxValue(720),
           ),
       )
       .toJSON(),
@@ -289,7 +322,8 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       if (interaction.options.getSubcommand() === "create") await createNight(interaction);
     },
     handleInteraction,
-    onReady(): void {
+    async onReady(): Promise<void> {
+      await migrateExistingMovieNightsToScheduledEvents(client, store, updateMessage);
       startExpirationJob(store, updateMessage);
     },
   };

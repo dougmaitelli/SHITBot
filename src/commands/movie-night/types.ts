@@ -12,6 +12,7 @@ export interface MovieNight {
   guildId: string;
   channelId: string;
   messageId: string;
+  scheduledEventId?: string;
   creatorId: string;
   startsAt: number;
   location: string;
