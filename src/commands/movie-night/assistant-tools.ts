@@ -2,7 +2,7 @@ import type { Client } from "discord.js";
 import { attendance, findUpcomingItem, upcomingItems } from "../../assistant/event-data.js";
 import { createReminder, parseReminderArguments } from "../../assistant/reminder-tool.js";
 import { itemSummary, objectArguments, requestedLimit } from "../../assistant/tool-utils.js";
-import type { AssistantTool } from "../../assistant/types.js";
+import type { AssistantTool, AssistantToolContext } from "../../assistant/types.js";
 import type { BotStore } from "../../store.js";
 import { parseDate } from "../../utils/date-parser.js";
 import { summarizeMovieNightSuggestions } from "../../assistant/movie-data.js";
@@ -31,9 +31,14 @@ export function registerMovieNightAssistantTools(
   tmdb?: TmdbClient,
 ): void {
   const nights = (guildId: string) => upcomingItems(store, guildId).filter((item) => item.kind === "movie-night");
+  const availableInMovieChannel = async (context: AssistantToolContext) => {
+    try { await requireMovieChannel(context.channelId); return true; }
+    catch { return false; }
+  };
 
   tools.push({
     name: "create_movie_night",
+    isAvailable: availableInMovieChannel,
     description: `Create a movie night in #${channelName}. Use only when explicitly requested. Omit movie to enable suggestions and voting.`,
     parameters: { type: "object", additionalProperties: false, required: ["when", "location"], properties: {
       when: { type: "string", description: `Date and time; defaults to ${timeZone} when no offset is given` },
@@ -63,6 +68,7 @@ export function registerMovieNightAssistantTools(
 
   tools.push({
     name: "search_movie_suggestions",
+    isAvailable: availableInMovieChannel,
     description: "Search TMDB for movie options matching a title or short query. Available only in the movie-night channel. This does not add a suggestion or cast a vote.",
     parameters: { type: "object", additionalProperties: false, required: ["query"], properties: { query: { type: "string", description: "Movie title or concise query, maximum 100 characters" } } },
     async execute(context, value) {
@@ -85,6 +91,7 @@ export function registerMovieNightAssistantTools(
 
   tools.push({
     name: "summarize_movie_night_suggestions",
+    isAvailable: availableInMovieChannel,
     description: "Summarize suggestions, vote counts, leaders, selected movie, voting status, and the requesting user's vote for an upcoming movie night. Available only in the movie-night channel.",
     parameters: { type: "object", additionalProperties: false, required: ["movie_night_id"], properties: { movie_night_id: { type: "string", description: "Stable movie-night ID" } } },
     async execute(context, value) {
@@ -99,6 +106,7 @@ export function registerMovieNightAssistantTools(
 
   tools.push({
     name: "list_upcoming_movie_nights",
+    isAvailable: availableInMovieChannel,
     description: "List upcoming movie nights in this server, ordered by date. Available only in the movie-night channel.",
     parameters: { type: "object", additionalProperties: false, properties: { limit: { type: "integer", minimum: 1, maximum: 25, description: "Defaults to 10" } } },
     async execute(context, value) {
@@ -111,6 +119,7 @@ export function registerMovieNightAssistantTools(
 
   tools.push({
     name: "list_my_upcoming_movie_nights",
+    isAvailable: availableInMovieChannel,
     description: "List upcoming movie nights where the requesting user RSVP'd Going, optionally including Maybe. Available only in the movie-night channel.",
     parameters: { type: "object", additionalProperties: false, properties: {
       include_maybe: { type: "boolean", description: "Defaults to false" },
@@ -128,6 +137,7 @@ export function registerMovieNightAssistantTools(
 
   tools.push({
     name: "get_movie_night_attendance",
+    isAvailable: availableInMovieChannel,
     description: "Get attendance and remaining availability for one upcoming movie night. Available only in the movie-night channel.",
     parameters: { type: "object", additionalProperties: false, required: ["movie_night_id"], properties: { movie_night_id: { type: "string", description: "Stable ID such as movie-night:abcd1234" } } },
     async execute(context, value) {
@@ -142,6 +152,7 @@ export function registerMovieNightAssistantTools(
 
   tools.push({
     name: "create_movie_night_reminder",
+    isAvailable: availableInMovieChannel,
     description: "Post or schedule an organizer-only reminder for an upcoming movie night. Available only in the movie-night channel. Omit when to post now.",
     parameters: { type: "object", additionalProperties: false, required: ["movie_night_id"], properties: {
       movie_night_id: { type: "string", description: "Stable movie-night ID" },

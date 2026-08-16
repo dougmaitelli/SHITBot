@@ -68,4 +68,36 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(secondMessages.at(-1)?.role, "tool");
     assert.equal(secondMessages.at(-1)?.content, "Created Party");
   });
+
+  it("retries instead of exposing tool protocol emitted as text", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    globalThis.fetch = async (_input, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({ choices: [{ message: {
+        content: requests.length === 1
+          ? '{"tool_calls":[{"function":{"arguments":"{}"}}]}'
+          : "A normal answer.",
+      } }] }));
+    };
+
+    assert.equal(await client().respond("General knowledge question", context, [], "System"), "A normal answer.");
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1]?.tools, undefined);
+  });
+
+  it("does not advertise unavailable tools to the provider", async () => {
+    let request: Record<string, unknown> | undefined;
+    globalThis.fetch = async (_input, init) => {
+      request = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify({ choices: [{ message: { content: "Answer" } }] }));
+    };
+    const tool: AssistantTool = {
+      name: "restricted", description: "Restricted", parameters: { type: "object" },
+      isAvailable: () => false,
+      async execute() { throw new Error("Should not execute"); },
+    };
+
+    assert.equal(await client().respond("Question", context, [tool], "System"), "Answer");
+    assert.equal(request?.tools, undefined);
+  });
 });

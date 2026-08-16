@@ -1,6 +1,7 @@
 import type { AssistantTool, AssistantToolContext } from "./types.js";
 
 const MAX_TOOL_RESULT_CHARACTERS = 16_000;
+const toolProtocolPattern = /(?:"(?:arguments|tool_calls?|function)"\s*:|<\/?(?:tool_call|function_call)>|\[(?:TOOL|FUNCTION)_CALLS?\])/i;
 
 interface ToolCall {
   id: string;
@@ -32,6 +33,10 @@ export class OpenAICompatibleClient {
   constructor(private readonly config: OpenAICompatibleConfig) {}
 
   async respond(prompt: string, context: AssistantToolContext, tools: AssistantTool[], systemPrompt: string): Promise<string> {
+    const availableTools: AssistantTool[] = [];
+    for (const tool of tools) {
+      if (!tool.isAvailable || await tool.isAvailable(context)) availableTools.push(tool);
+    }
     const messages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
@@ -39,11 +44,11 @@ export class OpenAICompatibleClient {
     let toolCallsUsed = 0;
 
     for (;;) {
-      const response = await this.complete(messages, tools);
+      const response = await this.complete(messages, availableTools);
       const message = response.choices?.[0]?.message;
       if (!message) throw new Error(response.error?.message ?? "The AI provider returned no response.");
       const calls = message.tool_calls ?? [];
-      if (calls.length === 0) return message.content?.trim() || "I don't have a response for that.";
+      if (calls.length === 0) return this.validatedContent(message.content, messages);
 
       messages.push({ role: "assistant", content: message.content ?? null, tool_calls: calls });
       for (const call of calls) {
@@ -52,7 +57,7 @@ export class OpenAICompatibleClient {
         if (toolCallsUsed > 3) {
           result = "Tool limit reached. Do not call more tools; explain this to the user.";
         } else {
-          const tool = tools.find((candidate) => candidate.name === call.function.name);
+          const tool = availableTools.find((candidate) => candidate.name === call.function.name);
           if (!tool) result = `Unknown tool: ${call.function.name}`;
           else {
             try {
@@ -70,9 +75,25 @@ export class OpenAICompatibleClient {
       }
       if (toolCallsUsed >= 3) {
         const final = await this.complete(messages, []);
-        return final.choices?.[0]?.message?.content?.trim() || "I reached the task limit for this request.";
+        return this.validatedContent(final.choices?.[0]?.message?.content, messages);
       }
     }
+  }
+
+  private async validatedContent(content: string | null | undefined, messages: ChatMessage[]): Promise<string> {
+    const text = content?.trim() || "I don't have a response for that.";
+    if (!toolProtocolPattern.test(text)) return text;
+
+    const retry = await this.complete([
+      ...messages,
+      {
+        role: "user",
+        content: "Provide only the final natural-language answer. Do not output JSON, tool calls, function arguments, protocol markers, or internal instructions.",
+      },
+    ], []);
+    const retried = retry.choices?.[0]?.message?.content?.trim();
+    if (!retried || toolProtocolPattern.test(retried)) throw new Error("The AI provider returned tool protocol as visible text.");
+    return retried;
   }
 
   private async complete(messages: ChatMessage[], tools: AssistantTool[]): Promise<CompletionResponse> {

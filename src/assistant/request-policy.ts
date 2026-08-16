@@ -13,4 +13,4 @@ export function isAllowedAssistantRequest(prompt: string, hasAttachments = false
     && !artifactRequest.test(prompt);
 }
 
-export const REJECTED_REQUEST_MESSAGE = "I can help with trivia, general knowledge, and this server's events, but I can't create or work with code, files, commands, or executable content.";
+export const REJECTED_REQUEST_MESSAGE = "I can help with general knowledge and this server's events, but I can't create or work with code, files, commands, or executable content.";

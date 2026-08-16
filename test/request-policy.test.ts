@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { isAllowedAssistantRequest } from "../src/assistant/request-policy.js";
 
 describe("assistant request policy", () => {
-  it("allows trivia, general knowledge, and event requests", () => {
+  it("allows general knowledge and event requests", () => {
     for (const prompt of [
       "Who painted The Starry Night?",
       "What is JavaScript?",

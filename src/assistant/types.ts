@@ -10,5 +10,6 @@ export interface AssistantTool {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
+  isAvailable?(context: AssistantToolContext): Promise<boolean> | boolean;
   execute(context: AssistantToolContext, argumentsValue: unknown): Promise<string>;
 }
