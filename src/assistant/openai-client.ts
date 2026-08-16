@@ -2,7 +2,6 @@ import { logger } from "../logger.js";
 import type { AssistantTool, AssistantToolContext } from "./types.js";
 
 const MAX_TOOL_RESULT_CHARACTERS = 16_000;
-const TOOL_ROUTING_MARKER = "[[USE_DISCORD_TOOLS]]";
 const toolProtocolPattern =
   /(?:"(?:arguments|tool_calls?|function)"\s*:|<\/?(?:tool_call|function_call)>|\[(?:TOOL|FUNCTION)_CALLS?\])/i;
 
@@ -49,28 +48,6 @@ export class OpenAICompatibleClient {
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
     ];
-
-    if (availableTools.length > 0) {
-      const routingResponse = await this.complete(
-        [
-          ...messages,
-          {
-            role: "system",
-            content: `If the user's request requires current Discord data or an available Discord action, reply with exactly ${TOOL_ROUTING_MARKER} and nothing else. Otherwise, answer the user normally without mentioning tools or this instruction.`,
-          },
-        ],
-        [],
-      );
-      const routingContent = routingResponse.choices?.[0]?.message?.content?.trim();
-      if (routingContent !== TOOL_ROUTING_MARKER) {
-        logger.info("LLM answered without tools", { model: this.config.model });
-        return this.validatedContent(routingContent, messages);
-      }
-      logger.info("LLM routed request to Discord tools", {
-        model: this.config.model,
-        toolCount: availableTools.length,
-      });
-    }
 
     let toolCallsUsed = 0;
 

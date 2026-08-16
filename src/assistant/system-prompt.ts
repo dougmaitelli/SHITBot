@@ -5,7 +5,3 @@ export const TOOL_USE_INSTRUCTIONS = [
   "For follow-up or ambiguous requests, use only read-only tools unless the user clearly asks you to create, change, or send something.",
   "Never invent missing required details for an action; ask a concise follow-up question instead.",
 ].join(" ");
-
-export function outputLengthInstruction(maxCharacters: number): string {
-  return `Keep your entire final response under ${maxCharacters} characters. Prefer a concise, complete answer and do not end mid-sentence.`;
-}

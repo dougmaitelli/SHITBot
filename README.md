@@ -91,7 +91,7 @@ Users can mention the bot to ask what it can do in conversational mode. Its answ
 
 Free-form chat is limited to ordinary general knowledge. Requests to create, inspect, edit, debug, or execute code, scripts, commands, files, documents, attachments, or other executable/downloadable artifacts are rejected before reaching the AI provider. Attempts to extract hidden instructions or secrets are also rejected and still count toward rate limits.
 
-The assistant is instructed to call tools only when a request needs current Discord data or an available action. General knowledge and ordinary conversation should be answered directly. It is also told to produce a complete response within `AI_MAX_OUTPUT_CHARACTERS`; the token limit and final character truncation remain safety backstops. Hard restrictions remain enforced in code: unavailable tools are never advertised, movie tools remain limited to the configured movie-night channel, and only registered tool calls can execute.
+The assistant is instructed to call tools only when a request needs current Discord data or an available action. General knowledge and ordinary conversation should be answered directly. Hard restrictions remain enforced in code: unavailable tools are never advertised, movie tools remain limited to the configured movie-night channel, and only registered tool calls can execute.
 
 Scheduled reminders persist across restarts and are posted within about 30 seconds of their requested time. Only an event's organizer can create its public reminders, and each organizer can have up to 10 pending reminders. Reminder text cannot trigger Discord mentions.
 
