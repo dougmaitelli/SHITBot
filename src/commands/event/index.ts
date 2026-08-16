@@ -1,6 +1,8 @@
 import {
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
+  GuildScheduledEventStatus,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type Interaction,
@@ -9,7 +11,12 @@ import { logger } from "../../logger.js";
 import { setRsvp, type RsvpStatus } from "../../shared/rsvp.js";
 import { parseDate } from "../../utils/date-parser.js";
 import { registerEventAssistantTools } from "./assistant-tools.js";
-import { createCommunityEvent, parseEventLink } from "./create-event.js";
+import {
+  adoptCommunityEvent,
+  createCommunityEvent,
+  parseEventLink,
+  parseScheduledEventReference,
+} from "./create-event.js";
 import { renderEvent } from "./event-render.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { deleteScheduledEvent } from "./scheduled-event.js";
@@ -64,7 +71,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       await interaction.reply({ content: "The event must be scheduled in the future.", flags: MessageFlags.Ephemeral });
       return;
     }
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       await createCommunityEvent(
         client,
@@ -94,6 +101,91 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "I couldn't create the event. Check my channel and **Create Events** permissions.",
         flags: MessageFlags.Ephemeral,
       });
+    }
+  }
+
+  async function importEvent(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!interaction.inCachedGuild() || !interaction.channelId) {
+      await interaction.reply({
+        content: "Events can only be imported in a server channel.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    let scheduledEventId: string;
+    try {
+      scheduledEventId = parseScheduledEventReference(
+        interaction.options.getString("discord-event", true),
+        interaction.guildId,
+      );
+    } catch {
+      await interaction.reply({
+        content: "Provide a valid Discord scheduled-event ID or copied event link from this server.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    if (
+      store
+        .listEvents()
+        .some((event) => event.guildId === interaction.guildId && event.scheduledEventId === scheduledEventId) ||
+      store.list().some((night) => night.guildId === interaction.guildId && night.scheduledEventId === scheduledEventId)
+    ) {
+      await interaction.reply({
+        content: "That Discord event is already managed by the bot.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await interaction.deferReply();
+    try {
+      const scheduledEvent = await interaction.guild.scheduledEvents.fetch(scheduledEventId);
+      if (
+        scheduledEvent.status !== GuildScheduledEventStatus.Scheduled ||
+        !scheduledEvent.scheduledStartTimestamp ||
+        scheduledEvent.scheduledStartTimestamp <= Date.now()
+      ) {
+        await interaction.editReply("Only a future scheduled Discord event can be imported.");
+        return;
+      }
+      if (
+        scheduledEvent.creatorId !== interaction.user.id &&
+        !interaction.memberPermissions.has(PermissionFlagsBits.ManageEvents)
+      ) {
+        await interaction.editReply("Only the Discord event creator or someone with Manage Events can import it.");
+        return;
+      }
+      const channel = interaction.channel;
+      if (!channel?.isTextBased() || !channel.isSendable()) {
+        await interaction.editReply("I can't post a managed event in this channel.");
+        return;
+      }
+      const event = await adoptCommunityEvent(
+        store,
+        {
+          guildId: interaction.guildId,
+          channelId: interaction.channelId,
+          creatorId: interaction.user.id,
+          attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
+        },
+        scheduledEvent,
+        (options) => channel.send(options),
+      );
+      await interaction.editReply(
+        `Imported **${event.name}**. [View the managed event](https://discord.com/channels/${event.guildId}/${event.channelId}/${event.messageId}).`,
+      );
+    } catch (error) {
+      logger.error("Could not import Discord event", {
+        error,
+        scheduledEventId,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        userId: interaction.user.id,
+      });
+      await interaction.editReply(
+        "I couldn't import that Discord event. Check that it still exists and I can post in this channel.",
+      );
     }
   }
 
@@ -189,9 +281,30 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
               .setMaxValue(100000),
           ),
       )
+      .addSubcommand((command) =>
+        command
+          .setName("import")
+          .setDescription("Convert an existing Discord event into a bot-managed event")
+          .addStringOption((option) =>
+            option
+              .setName("discord-event")
+              .setDescription("Discord event ID or copied event link")
+              .setMaxLength(300)
+              .setRequired(true),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("attendance-limit")
+              .setDescription("Maximum number of people who can RSVP Going")
+              .setMinValue(1)
+              .setMaxValue(100000),
+          ),
+      )
       .toJSON(),
     async execute(interaction) {
-      if (interaction.options.getSubcommand() === "create") await create(interaction);
+      const subcommand = interaction.options.getSubcommand();
+      if (subcommand === "create") await create(interaction);
+      else if (subcommand === "import") await importEvent(interaction);
     },
     handleInteraction,
     onReady() {

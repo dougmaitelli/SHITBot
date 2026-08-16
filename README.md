@@ -79,6 +79,8 @@ If `movie` is omitted, suggestion and voting controls appear automatically. The 
 
 Use `/event create` in any server channel for a non-movie event. `name` and `when` are required; `description`, `link`, `duration`, and `attendance-limit` are optional. Like movie nights, the bot creates a Discord scheduled event, provides RSVP buttons, and disables RSVPs once the start time passes.
 
+Use `/event import` with an existing Discord scheduled-event ID or copied event link to convert it into a bot-managed event without creating a duplicate Discord event. The command creates the RSVP post in the current channel and supports an optional attendance limit. Only the Discord event creator or someone with **Manage Events** can import it.
+
 Both `/event create` and `/movie-night create` accept an optional `attendance-limit`. Once that many people have selected **Going**, additional Going responses are rejected until someone changes their response. Maybe and Can't-go responses do not count toward the limit.
 
 ## AI assistant
