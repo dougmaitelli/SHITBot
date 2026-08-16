@@ -6,41 +6,14 @@ import { renderEvent } from "./event-render.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { deleteScheduledEvent } from "./scheduled-event.js";
 import type { CommunityEvent } from "./types.js";
-import { createCommunityEvent } from "./create-event.js";
+import { createCommunityEvent, parseEventLink } from "./create-event.js";
 import { registerEventAssistantTools } from "./assistant-tools.js";
 
 const actions = new Set(["eventRsvp", "eventDelete"]);
 const isClosed = (event: CommunityEvent) => Boolean(event.closedAt) || event.startsAt <= Math.floor(Date.now() / 1000);
 
-interface EventToolArguments {
-  name: string; when: string; description?: string; link?: string;
-  duration_minutes?: number; attendance_limit?: number;
-}
-
-function parseToolArguments(value: unknown): EventToolArguments {
-  if (!value || typeof value !== "object") throw new Error("Event details must be an object.");
-  const input = value as Record<string, unknown>;
-  if (typeof input.name !== "string" || !input.name.trim()) throw new Error("An event name is required.");
-  if (typeof input.when !== "string" || !input.when.trim()) throw new Error("An event date and time are required.");
-  if (input.description !== undefined && typeof input.description !== "string") throw new Error("Description must be text.");
-  if (input.link !== undefined && typeof input.link !== "string") throw new Error("Link must be text.");
-  const duration = input.duration_minutes;
-  if (duration !== undefined && (!Number.isInteger(duration) || (duration as number) < 15 || (duration as number) > 10080)) throw new Error("Duration must be from 15 to 10080 minutes.");
-  const limit = input.attendance_limit;
-  if (limit !== undefined && (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100000)) throw new Error("Attendance limit must be from 1 to 100000.");
-  return input as unknown as EventToolArguments;
-}
-
-function parseLink(value: string | undefined): string | undefined {
-  const link = value?.trim() || undefined;
-  if (!link) return undefined;
-  const url = new URL(link);
-  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Unsupported URL protocol");
-  return link;
-}
-
 const createEventCommand: CommandFactory = ({ client, store, config, assistantTools }): CommandModule => {
-  registerEventAssistantTools(client, store, assistantTools, config.timeZone);
+  registerEventAssistantTools(client, store, assistantTools, config.timeZone, config.movieNightsChannel);
   async function updateMessage(event: CommunityEvent): Promise<void> {
     const channel = await client.channels.fetch(event.channelId);
     if (!channel?.isTextBased() || channel.isDMBased()) return;
@@ -59,7 +32,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       return;
     }
     let link: string | undefined;
-    try { link = parseLink(interaction.options.getString("link") ?? undefined); }
+    try { link = parseEventLink(interaction.options.getString("link") ?? undefined); }
     catch {
       await interaction.reply({ content: "The event link must be a valid `http://` or `https://` URL.", flags: MessageFlags.Ephemeral });
       return;
@@ -87,41 +60,6 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       await interaction.followUp({ content: "I couldn't create the event. Check my channel and **Create Events** permissions.", flags: MessageFlags.Ephemeral });
     }
   }
-
-  assistantTools.push({
-    name: "create_event",
-    description: "Create a non-movie event in the current Discord channel. Use only when explicitly requested.",
-    parameters: {
-      type: "object", additionalProperties: false, required: ["name", "when"],
-      properties: {
-        name: { type: "string", description: "Event name, maximum 100 characters" },
-        when: { type: "string", description: `Date and time; defaults to ${config.timeZone} when no offset is given` },
-        description: { type: "string", description: "Optional details, maximum 1000 characters" },
-        link: { type: "string", description: "Optional http or https URL" },
-        duration_minutes: { type: "integer", minimum: 15, maximum: 10080, description: "Defaults to 180" },
-        attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
-      },
-    },
-    async execute(context, value) {
-      const input = parseToolArguments(value);
-      const startsAt = parseDate(input.when, config.timeZone);
-      if (!startsAt) throw new Error("I couldn't understand the event date and time.");
-      if (startsAt <= Math.floor(Date.now() / 1000)) throw new Error("The event must be scheduled in the future.");
-      const name = input.name.trim();
-      if (name.length > 100) throw new Error("The event name must be at most 100 characters.");
-      const description = input.description?.trim() || undefined;
-      if (description && description.length > 1000) throw new Error("The description must be at most 1000 characters.");
-      let link: string | undefined;
-      try { link = parseLink(input.link); } catch { throw new Error("The event link must be a valid http or https URL."); }
-      const channel = await client.channels.fetch(context.channelId);
-      if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("I can't send an event in this channel.");
-      const event = await createCommunityEvent(client, store, {
-        guild: context.guild, channelId: context.channelId, creatorId: context.userId, name, startsAt,
-        description, link, attendanceLimit: input.attendance_limit, durationMinutes: input.duration_minutes ?? 180,
-      }, (options) => channel.send(options));
-      return `Created **${event.name}** for <t:${event.startsAt}:F> in <#${event.channelId}>.`;
-    },
-  });
 
   async function rsvp(interaction: ButtonInteraction, event: CommunityEvent, status: RsvpStatus): Promise<void> {
     if (!setRsvp(event.rsvps, interaction.user.id, status, event.attendanceLimit)) {

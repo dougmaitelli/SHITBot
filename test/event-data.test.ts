@@ -21,6 +21,7 @@ describe("assistant event data", () => {
     assert.deepEqual(attendance(items[0]!), {
       goingCount: 1, maybeCount: 1, notGoingCount: 0,
       going: ["<@user>"], maybe: ["<@maybe>"], notGoing: [], attendeeListsTruncated: false,
+      discordInterestedCount: null,
       attendanceLimit: 3, spotsAvailable: 2,
     });
   });

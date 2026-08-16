@@ -23,29 +23,10 @@ import { deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-eve
 import { createMovieNight } from "./create-night.js";
 import { TmdbClient, type MovieDetails, type MovieMatch } from "./tmdb.js";
 import type { MovieNight, MovieSuggestion, RsvpStatus } from "./types.js";
-import { summarizeMovieNightSuggestions } from "../../assistant/movie-data.js";
 import { isMovieNightChannel } from "./channel-policy.js";
 import { registerMovieNightAssistantTools } from "./assistant-tools.js";
 
 const MAX_SUGGESTIONS = 25;
-
-interface MovieNightToolArguments {
-  when: string; location: string; movie?: string;
-  duration_minutes?: number; attendance_limit?: number;
-}
-
-function parseMovieNightToolArguments(value: unknown): MovieNightToolArguments {
-  if (!value || typeof value !== "object") throw new Error("Movie-night details must be an object.");
-  const input = value as Record<string, unknown>;
-  if (typeof input.when !== "string" || !input.when.trim()) throw new Error("A date and time are required.");
-  if (typeof input.location !== "string" || !input.location.trim()) throw new Error("A location is required.");
-  if (input.movie !== undefined && typeof input.movie !== "string") throw new Error("Movie must be text.");
-  const duration = input.duration_minutes;
-  if (duration !== undefined && (!Number.isInteger(duration) || (duration as number) < 30 || (duration as number) > 720)) throw new Error("Duration must be from 30 to 720 minutes.");
-  const limit = input.attendance_limit;
-  if (limit !== undefined && (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100000)) throw new Error("Attendance limit must be from 1 to 100000.");
-  return input as unknown as MovieNightToolArguments;
-}
 
 const componentActions = new Set([
   "rsvp",
@@ -82,7 +63,9 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
     return channel;
   }
 
-  registerMovieNightAssistantTools(client, store, assistantTools, config.timeZone, getAssistantMovieChannel);
+  registerMovieNightAssistantTools(
+    client, store, assistantTools, config.timeZone, getAssistantMovieChannel, channelName, tmdb,
+  );
 
   async function updateMessage(night: MovieNight): Promise<void> {
     const channel = await client.channels.fetch(night.channelId);
@@ -177,89 +160,6 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
       });
     }
   }
-
-  assistantTools.push({
-    name: "create_movie_night",
-    description: `Create a movie night in #${channelName}. Use only when explicitly requested. Omit movie to enable suggestions and voting.`,
-    parameters: {
-      type: "object", additionalProperties: false, required: ["when", "location"],
-      properties: {
-        when: { type: "string", description: `Date and time; defaults to ${config.timeZone} when no offset is given` },
-        location: { type: "string", description: "Location, maximum 200 characters" },
-        movie: { type: "string", description: "Optional selected movie; omit for suggestions and voting" },
-        duration_minutes: { type: "integer", minimum: 30, maximum: 720, description: "Defaults to 180" },
-        attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
-      },
-    },
-    async execute(context, value) {
-      const channel = await getAssistantMovieChannel(context.channelId);
-      const input = parseMovieNightToolArguments(value);
-      const startsAt = parseDate(input.when, config.timeZone);
-      if (!startsAt) throw new Error("I couldn't understand the movie-night date and time.");
-      if (startsAt <= Math.floor(Date.now() / 1000)) throw new Error("The movie night must be scheduled in the future.");
-      const location = input.location.trim();
-      if (location.length > 200) throw new Error("The location must be at most 200 characters.");
-      const movie = input.movie?.trim() || null;
-      if (movie && movie.length > 100) throw new Error("The movie title must be at most 100 characters.");
-      const night = await createMovieNight(client, store, {
-        guild: context.guild, channelId: channel.id, creatorId: context.userId, startsAt, location, movie,
-        attendanceLimit: input.attendance_limit, durationMinutes: input.duration_minutes ?? 180,
-      }, (options) => channel.send(options));
-      return `Created the movie night for <t:${night.startsAt}:F> in <#${night.channelId}>.`;
-    },
-  });
-
-  assistantTools.push({
-    name: "search_movie_suggestions",
-    description: "Search TMDB for movie options matching a title or short query. Use when the user asks for movie ideas or wants to find a particular movie. This does not add a suggestion or cast a vote.",
-    parameters: {
-      type: "object", additionalProperties: false, required: ["query"],
-      properties: { query: { type: "string", description: "Movie title or concise search query, maximum 100 characters" } },
-    },
-    async execute(_context, value) {
-      await getAssistantMovieChannel(_context.channelId);
-      if (!value || typeof value !== "object" || typeof (value as Record<string, unknown>).query !== "string") {
-        throw new Error("A movie search query is required.");
-      }
-      const query = ((value as Record<string, unknown>).query as string).trim();
-      if (!query || query.length > 100) throw new Error("The movie search query must be from 1 to 100 characters.");
-      const matches = await tmdb.searchMovies(query);
-      const detailed = await Promise.all(matches.map(async (match) => {
-        try { return await tmdb.getMovieDetails(match.tmdbId); }
-        catch { return match; }
-      }));
-      return JSON.stringify({
-        query,
-        results: detailed.map((movie) => ({
-          title: movie.title, release_year: movie.releaseYear ?? null, tmdb_id: movie.tmdbId,
-          description: "description" in movie && typeof movie.description === "string" ? movie.description.slice(0, 500) : null,
-          rating: "rating" in movie && typeof movie.rating === "number" ? movie.rating : null,
-          imdb_url: "imdbId" in movie && typeof movie.imdbId === "string" ? `https://www.imdb.com/title/${movie.imdbId}/` : null,
-        })),
-        attribution: "Movie data provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.",
-      });
-    },
-  });
-
-  assistantTools.push({
-    name: "summarize_movie_night_suggestions",
-    description: "Get and summarize the suggestions, vote counts, current leaders, selected movie, voting status, and requesting user's vote for an upcoming movie night. Obtain its ID from an upcoming-events list first.",
-    parameters: {
-      type: "object", additionalProperties: false, required: ["movie_night_id"],
-      properties: { movie_night_id: { type: "string", description: "Stable ID such as movie-night:abcd1234" } },
-    },
-    async execute(context, value) {
-      await getAssistantMovieChannel(context.channelId);
-      if (!value || typeof value !== "object" || typeof (value as Record<string, unknown>).movie_night_id !== "string") {
-        throw new Error("movie_night_id is required.");
-      }
-      const summary = summarizeMovieNightSuggestions(
-        store, context.guild.id, (value as Record<string, unknown>).movie_night_id as string, context.userId,
-      );
-      if (!summary) throw new Error("That upcoming movie night could not be found.");
-      return JSON.stringify(summary);
-    },
-  });
 
   async function handleRsvp(interaction: ButtonInteraction, night: MovieNight, status: RsvpStatus): Promise<void> {
     if (!setRsvp(night.rsvps, interaction.user.id, status, night.attendanceLimit)) {

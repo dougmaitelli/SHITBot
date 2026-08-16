@@ -12,13 +12,14 @@ describe("domain assistant-tool registration", () => {
     const store = new BotStore("/tmp/moviebot-tool-registration-test.json");
     const eventTools: AssistantTool[] = [];
     const movieTools: AssistantTool[] = [];
-    registerEventAssistantTools(client, store, eventTools, "UTC");
+    registerEventAssistantTools(client, store, eventTools, "UTC", "movie-nights");
     registerMovieNightAssistantTools(client, store, movieTools, "UTC", async () => undefined);
 
     assert.deepEqual(eventTools.map((tool) => tool.name), [
-      "list_upcoming_events", "list_my_upcoming_events", "get_event_attendance", "create_event_reminder",
+      "create_event", "list_upcoming_events", "list_my_upcoming_events", "get_event_attendance", "create_event_reminder",
     ]);
     assert.deepEqual(movieTools.map((tool) => tool.name), [
+      "create_movie_night", "search_movie_suggestions", "summarize_movie_night_suggestions",
       "list_upcoming_movie_nights", "list_my_upcoming_movie_nights",
       "get_movie_night_attendance", "create_movie_night_reminder",
     ]);

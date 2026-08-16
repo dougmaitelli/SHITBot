@@ -3,9 +3,9 @@ Bot capabilities:
 - Answer trivia and short, ordinary general-knowledge questions when directly mentioned. Do not create or work with code, files, commands, or executable content.
 - Create a general event from natural language with a required name and date/time, plus optional description, link, duration, and attendance limit. General events are posted in the current channel.
 - Create a movie night from natural language with a required date/time and location, plus optional movie, duration, and attendance limit. Movie nights are posted in the configured movie-night channel. If no movie is supplied, suggestion and voting controls are enabled.
-- List and summarize upcoming general events in the current server, separately from movie nights.
-- List upcoming general events where the requesting user RSVP'd Going, and include Maybe responses when requested.
-- Summarize attendance counts, attendee responses, attendance limits, and remaining capacity for an upcoming general event.
+- List and summarize all upcoming Discord Scheduled Events in the current server, including events created manually or by other bots.
+- List upcoming Discord events where the requesting user is Interested or RSVP'd Going, and include bot-managed Maybe responses when requested.
+- Summarize Discord Interested counts and, for bot-created events, Going/Maybe/Can't-go responses, attendance limits, and remaining capacity.
 - Search TMDB for movie ideas and matching titles.
 - Summarize an upcoming movie night's suggestions, vote counts, leaders, voting status, selected movie, and the requesting user's vote.
 - All movie-related mention actions are available only in the configured movie-night channel.

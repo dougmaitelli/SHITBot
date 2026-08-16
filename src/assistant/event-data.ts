@@ -13,6 +13,8 @@ export interface UpcomingItem {
   details?: string;
   attendanceLimit?: number;
   rsvps: Rsvps;
+  url?: string;
+  discordInterestedCount?: number;
 }
 
 export function upcomingItems(store: BotStore, guildId: string, now = Math.floor(Date.now() / 1000)): UpcomingItem[] {
@@ -48,6 +50,7 @@ export function attendance(item: UpcomingItem) {
     goingCount: going.length, maybeCount: maybe.length, notGoingCount: notGoing.length,
     going: going.slice(0, 50), maybe: maybe.slice(0, 50), notGoing: notGoing.slice(0, 50),
     attendeeListsTruncated: going.length > 50 || maybe.length > 50 || notGoing.length > 50,
+    discordInterestedCount: item.discordInterestedCount ?? null,
     attendanceLimit: item.attendanceLimit ?? null,
     spotsAvailable: item.attendanceLimit === undefined ? null : Math.max(0, item.attendanceLimit - going.length),
   };

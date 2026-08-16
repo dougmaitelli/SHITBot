@@ -18,6 +18,7 @@ export function itemSummary(item: UpcomingItem, userId?: string) {
     discord_time: `<t:${item.startsAt}:F>`, channel: `<#${item.channelId}>`, organizer: `<@${item.creatorId}>`,
     details: item.details?.slice(0, 300) ?? null, going: counts.goingCount, maybe: counts.maybeCount,
     not_going: counts.notGoingCount, attendance_limit: counts.attendanceLimit,
-    spots_available: counts.spotsAvailable, user_status: userId ? item.rsvps[userId] ?? null : undefined,
+    spots_available: counts.spotsAvailable, discord_interested: counts.discordInterestedCount,
+    event_url: item.url ?? null, user_status: userId ? item.rsvps[userId] ?? null : undefined,
   };
 }

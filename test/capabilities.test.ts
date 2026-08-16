@@ -7,8 +7,8 @@ describe("assistant capability catalog", () => {
     for (const capability of [
       "Create a general event",
       "Create a movie night",
-      "List and summarize upcoming",
-      "Summarize attendance",
+      "List and summarize all upcoming",
+      "Summarize Discord Interested",
       "schedule a persistent reminder",
       "Search TMDB",
       "Summarize an upcoming movie night's suggestions",

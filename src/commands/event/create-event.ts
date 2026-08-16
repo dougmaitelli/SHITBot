@@ -17,6 +17,14 @@ export interface CreateCommunityEventInput {
   durationMinutes: number;
 }
 
+export function parseEventLink(value: string | undefined): string | undefined {
+  const link = value?.trim() || undefined;
+  if (!link) return undefined;
+  const url = new URL(link);
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Unsupported URL protocol");
+  return link;
+}
+
 type SendEventMessage = (options: ReturnType<typeof renderEvent>) => Promise<{ id: string; delete(): Promise<unknown> }>;
 
 export async function createCommunityEvent(

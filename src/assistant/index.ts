@@ -7,6 +7,7 @@ import { isAllowedAssistantRequest, REJECTED_REQUEST_MESSAGE } from "./request-p
 
 export interface AssistantConfig extends OpenAICompatibleConfig {
   maxInputCharacters: number;
+  maxOutputCharacters: number;
   userRequestsPerWindow: number;
   guildRequestsPerWindow: number;
   rateLimitWindowMs: number;
@@ -17,8 +18,10 @@ function promptFromMention(message: Message, botId: string): string {
   return message.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
 }
 
-function visibleReply(value: string): string {
-  return value.length <= 1900 ? value : `${value.slice(0, 1897)}...`;
+export function boundedReply(value: string, maxCharacters: number): string {
+  if (value.length <= maxCharacters) return value;
+  if (maxCharacters <= 3) return ".".repeat(maxCharacters);
+  return `${value.slice(0, maxCharacters - 3)}...`;
 }
 
 export function startAssistant(client: Client, tools: AssistantTool[], config: AssistantConfig): void {
@@ -67,7 +70,7 @@ export function startAssistant(client: Client, tools: AssistantTool[], config: A
         BOT_CAPABILITIES,
         `The configured timezone is ${config.timeZone}. The current time is ${new Date().toISOString()}.`,
       ].join(" "));
-      await reply(visibleReply(response));
+      await reply(boundedReply(response, config.maxOutputCharacters));
     } catch (error) {
       console.error("Assistant request failed", error);
       await reply("I couldn't complete that request right now.");
