@@ -1,23 +1,30 @@
 import { randomUUID } from "node:crypto";
-import type { Client } from "discord.js";
-import type { BotStore } from "../store.js";
-import { parseDate } from "../utils/date-parser.js";
 import { sendReminder } from "../reminders/index.js";
+import { parseDate } from "../utils/date-parser.js";
 import type { EventReminder } from "../reminders/types.js";
+import type { BotStore } from "../store.js";
 import type { UpcomingItem } from "./event-data.js";
 import type { AssistantToolContext } from "./types.js";
+import type { Client } from "discord.js";
 
-export interface ReminderArguments { when?: string; message?: string }
+export interface ReminderArguments {
+  when?: string;
+  message?: string;
+}
 
 export function parseReminderArguments(input: Record<string, unknown>): ReminderArguments {
   if (input.when !== undefined && typeof input.when !== "string") throw new Error("when must be text.");
   if (input.message !== undefined && typeof input.message !== "string") throw new Error("message must be text.");
-  return input as ReminderArguments;
+  return input;
 }
 
 export async function createReminder(
-  client: Client, store: BotStore, context: AssistantToolContext, item: UpcomingItem,
-  input: ReminderArguments, timeZone: string,
+  client: Client,
+  store: BotStore,
+  context: AssistantToolContext,
+  item: UpcomingItem,
+  input: ReminderArguments,
+  timeZone: string,
 ): Promise<string> {
   if (item.creatorId !== context.userId) throw new Error("Only the organizer can create a public reminder.");
   const note = input.message?.trim() || undefined;
@@ -32,8 +39,14 @@ export async function createReminder(
     sendAt = parsed;
   }
   const reminder: EventReminder = {
-    id: randomUUID().slice(0, 8), guildId: context.guild.id, channelId: context.channelId,
-    creatorId: context.userId, targetRef: item.ref, sendAt, note, createdAt: Date.now(),
+    id: randomUUID().slice(0, 8),
+    guildId: context.guild.id,
+    channelId: context.channelId,
+    creatorId: context.userId,
+    targetRef: item.ref,
+    sendAt,
+    note,
+    createdAt: Date.now(),
   };
   if (!input.when) {
     await sendReminder(client, store, reminder);

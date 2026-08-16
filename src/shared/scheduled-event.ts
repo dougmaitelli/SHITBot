@@ -1,9 +1,4 @@
-import {
-  GuildScheduledEventEntityType,
-  GuildScheduledEventPrivacyLevel,
-  type Client,
-  type Guild,
-} from "discord.js";
+import { GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, type Client, type Guild } from "discord.js";
 
 export interface ScheduledEventReference {
   guildId: string;
@@ -32,7 +27,11 @@ export async function createExternalScheduledEvent(guild: Guild, details: Schedu
   return event.id;
 }
 
-export async function renameScheduledEvent(client: Client, reference: ScheduledEventReference, name: string): Promise<void> {
+export async function renameScheduledEvent(
+  client: Client,
+  reference: ScheduledEventReference,
+  name: string,
+): Promise<void> {
   if (!reference.scheduledEventId) return;
   const guild = await client.guilds.fetch(reference.guildId);
   await guild.scheduledEvents.edit(reference.scheduledEventId, { name: name.slice(0, 100) });

@@ -5,10 +5,19 @@ import type { CommunityEvent } from "../src/commands/event/types.js";
 
 function communityEvent(): CommunityEvent {
   return {
-    id: "event", guildId: "guild", channelId: "channel", messageId: "message", scheduledEventId: "scheduled",
-    creatorId: "creator", name: "Board games", startsAt: Math.floor(Date.now() / 1000) + 3600,
-    description: "Bring your favorites", link: "https://example.com/details",
-    attendanceLimit: 5, rsvps: { alice: "yes", bob: "maybe", charlie: "no" }, createdAt: Date.now(),
+    id: "event",
+    guildId: "guild",
+    channelId: "channel",
+    messageId: "message",
+    scheduledEventId: "scheduled",
+    creatorId: "creator",
+    name: "Board games",
+    startsAt: Math.floor(Date.now() / 1000) + 3600,
+    description: "Bring your favorites",
+    link: "https://example.com/details",
+    attendanceLimit: 5,
+    rsvps: { alice: "yes", bob: "maybe", charlie: "no" },
+    createdAt: Date.now(),
   };
 }
 
@@ -20,7 +29,10 @@ describe("renderEvent", () => {
     assert.match(embed.description ?? "", /Bring your favorites/);
     assert.equal(embed.fields?.find((field) => field.name === "Going (1 / 5)")?.value, "<@alice>");
     assert.match(embed.fields?.find((field) => field.name === "Link")?.value ?? "", /https:\/\/example\.com\/details/);
-    assert.match(embed.fields?.find((field) => field.name === "Discord event")?.value ?? "", /discord\.com\/events\/guild\/scheduled/);
+    assert.match(
+      embed.fields?.find((field) => field.name === "Discord event")?.value ?? "",
+      /discord\.com\/events\/guild\/scheduled/,
+    );
     assert.equal(rendered.components[0]?.components.length, 3);
   });
 

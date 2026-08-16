@@ -13,7 +13,7 @@ describe("TmdbClient", () => {
   it("searches movies with bearer authentication and normalizes results", async () => {
     let requestedUrl: URL | undefined;
     let requestedAuthorization: string | null = null;
-    const client = new TmdbClient("secret-token", (async (input, init) => {
+    const client = new TmdbClient("secret-token", async (input, init) => {
       requestedUrl = new URL(input.toString());
       requestedAuthorization = new Headers(init?.headers).get("authorization");
       return jsonResponse({
@@ -23,7 +23,7 @@ describe("TmdbClient", () => {
           { id: "invalid", title: "Ignored" },
         ],
       });
-    }) as typeof fetch);
+    });
 
     const results = await client.searchMovies("Alien & friends");
 
@@ -39,7 +39,7 @@ describe("TmdbClient", () => {
 
   it("returns normalized movie details", async () => {
     let requestedUrl: URL | undefined;
-    const client = new TmdbClient("token", (async (input) => {
+    const client = new TmdbClient("token", async (input) => {
       requestedUrl = new URL(input.toString());
       return jsonResponse({
         id: 348,
@@ -50,7 +50,7 @@ describe("TmdbClient", () => {
         vote_average: 8.2,
         external_ids: { imdb_id: "tt0078748" },
       });
-    }) as typeof fetch);
+    });
 
     assert.deepEqual(await client.getMovieDetails(348), {
       tmdbId: 348,
@@ -66,16 +66,18 @@ describe("TmdbClient", () => {
   });
 
   it("ignores malformed IMDb IDs", async () => {
-    const client = new TmdbClient("token", (async () => jsonResponse({
-      id: 348,
-      title: "Alien",
-      external_ids: { imdb_id: "not-an-imdb-id" },
-    })) as typeof fetch);
+    const client = new TmdbClient("token", async () =>
+      jsonResponse({
+        id: 348,
+        title: "Alien",
+        external_ids: { imdb_id: "not-an-imdb-id" },
+      }),
+    );
     assert.equal((await client.getMovieDetails(348)).imdbId, undefined);
   });
 
   it("throws when TMDB returns an error", async () => {
-    const client = new TmdbClient("token", (async () => jsonResponse({ status_message: "Unauthorized" }, 401)) as typeof fetch);
+    const client = new TmdbClient("token", async () => jsonResponse({ status_message: "Unauthorized" }, 401));
     await assert.rejects(() => client.searchMovies("Alien"), /status 401/);
   });
 });

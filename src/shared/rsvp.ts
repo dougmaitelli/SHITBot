@@ -24,7 +24,9 @@ export function setRsvp(rsvps: Rsvps, userId: string, status: RsvpStatus, attend
 
 export function buildRsvpFields(rsvps: Rsvps, attendanceLimit?: number): APIEmbedField[] {
   return statuses.map((status) => {
-    const users = Object.entries(rsvps).filter(([, value]) => value === status).map(([id]) => `<@${id}>`);
+    const users = Object.entries(rsvps)
+      .filter(([, value]) => value === status)
+      .map(([id]) => `<@${id}>`);
     const mentions = users.length ? users.join(", ") : "Nobody yet";
     return {
       name: `${labels[status]} (${users.length}${status === "yes" && attendanceLimit !== undefined ? ` / ${attendanceLimit}` : ""})`,
@@ -36,11 +38,13 @@ export function buildRsvpFields(rsvps: Rsvps, attendanceLimit?: number): APIEmbe
 
 export function buildRsvpButtons(id: string, action: string, disabled: boolean): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    ...statuses.map((status) => new ButtonBuilder()
-      .setCustomId(`${action}:${id}:${status}`)
-      .setLabel(labels[status])
-      .setEmoji(emojis[status])
-      .setStyle(styles[status])
-      .setDisabled(disabled)),
+    ...statuses.map((status) =>
+      new ButtonBuilder()
+        .setCustomId(`${action}:${id}:${status}`)
+        .setLabel(labels[status])
+        .setEmoji(emojis[status])
+        .setStyle(styles[status])
+        .setDisabled(disabled),
+    ),
   );
 }

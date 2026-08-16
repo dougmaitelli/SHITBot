@@ -7,7 +7,10 @@ export class FixedWindowRateLimiter {
   private readonly buckets = new Map<string, Bucket>();
   private nextSweepAt = 0;
 
-  constructor(private readonly limit: number, private readonly windowMs: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly windowMs: number,
+  ) {}
 
   consume(key: string, now = Date.now()): { allowed: boolean; retryAfterMs: number } {
     if (now >= this.nextSweepAt) {

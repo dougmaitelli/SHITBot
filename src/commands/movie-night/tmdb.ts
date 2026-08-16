@@ -49,8 +49,9 @@ export class TmdbClient {
 
     const response = await this.request<SearchMovieResponse>(url);
     return (response.results ?? [])
-      .filter((result): result is SearchMovieResult & { id: number; title: string } =>
-        typeof result.id === "number" && typeof result.title === "string",
+      .filter(
+        (result): result is SearchMovieResult & { id: number; title: string } =>
+          typeof result.id === "number" && typeof result.title === "string",
       )
       .slice(0, 5)
       .map((result) => {
@@ -72,8 +73,7 @@ export class TmdbClient {
       throw new Error("TMDB returned invalid movie details");
     }
 
-    const releaseYear =
-      typeof response.release_date === "string" ? Number(response.release_date.slice(0, 4)) : NaN;
+    const releaseYear = typeof response.release_date === "string" ? Number(response.release_date.slice(0, 4)) : NaN;
     const imdbId = response.external_ids?.imdb_id;
     return {
       tmdbId: response.id,
@@ -82,9 +82,7 @@ export class TmdbClient {
       imdbId: typeof imdbId === "string" && /^tt\d+$/.test(imdbId) ? imdbId : undefined,
       description: typeof response.overview === "string" && response.overview.trim() ? response.overview : undefined,
       posterUrl:
-        typeof response.poster_path === "string"
-          ? `https://image.tmdb.org/t/p/w500${response.poster_path}`
-          : undefined,
+        typeof response.poster_path === "string" ? `https://image.tmdb.org/t/p/w500${response.poster_path}` : undefined,
       rating:
         typeof response.vote_average === "number" && Number.isFinite(response.vote_average)
           ? response.vote_average

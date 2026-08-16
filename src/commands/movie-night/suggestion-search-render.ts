@@ -1,5 +1,5 @@
-import type { APIEmbedField } from "discord.js";
 import type { MovieNight, MovieSuggestion } from "./types.js";
+import type { APIEmbedField } from "discord.js";
 
 const attribution =
   "\n\n[TMDB](https://www.themoviedb.org/) movie data. This product uses the TMDB API but is not endorsed or certified by TMDB.";

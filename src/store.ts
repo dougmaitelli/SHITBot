@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { MovieNight } from "./commands/movie-night/types.js";
 import type { CommunityEvent } from "./commands/event/types.js";
+import type { MovieNight } from "./commands/movie-night/types.js";
 import type { EventReminder } from "./reminders/types.js";
 
 interface StoreData {
@@ -21,7 +21,9 @@ export class BotStore {
     try {
       const saved = JSON.parse(await readFile(this.filename, "utf8")) as Partial<StoreData>;
       this.data = {
-        nights: saved.nights ?? {}, events: saved.events ?? {}, reminders: saved.reminders ?? {},
+        nights: saved.nights ?? {},
+        events: saved.events ?? {},
+        reminders: saved.reminders ?? {},
         greaseLastUsedAt: saved.greaseLastUsedAt,
       };
     } catch (error) {

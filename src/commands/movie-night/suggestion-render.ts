@@ -16,7 +16,11 @@ export function renderSuggestion(night: MovieNight, suggestion: MovieSuggestion)
     .setDescription((suggestion.description || "No description is available for this movie.").slice(0, 4096))
     .addFields(
       { name: "Year", value: suggestion.releaseYear?.toString() ?? "Unknown", inline: true },
-      { name: "TMDB rating", value: suggestion.rating ? `${suggestion.rating.toFixed(1)}/10` : "Not rated", inline: true },
+      {
+        name: "TMDB rating",
+        value: suggestion.rating ? `${suggestion.rating.toFixed(1)}/10` : "Not rated",
+        inline: true,
+      },
       { name: "Votes", value: suggestion.voters.length.toString(), inline: true },
       { name: "Suggested by", value: `<@${suggestion.suggestedBy}>`, inline: true },
     )

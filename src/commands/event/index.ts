@@ -1,13 +1,20 @@
-import { MessageFlags, SlashCommandBuilder, type ButtonInteraction, type ChatInputCommandInteraction, type Interaction } from "discord.js";
-import { parseDate } from "../../utils/date-parser.js";
+import {
+  MessageFlags,
+  SlashCommandBuilder,
+  type ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type Interaction,
+} from "discord.js";
+import { logger } from "../../logger.js";
 import { setRsvp, type RsvpStatus } from "../../shared/rsvp.js";
-import type { CommandFactory, CommandModule } from "../types.js";
+import { parseDate } from "../../utils/date-parser.js";
+import { registerEventAssistantTools } from "./assistant-tools.js";
+import { createCommunityEvent, parseEventLink } from "./create-event.js";
 import { renderEvent } from "./event-render.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { deleteScheduledEvent } from "./scheduled-event.js";
+import type { CommandFactory, CommandModule } from "../types.js";
 import type { CommunityEvent } from "./types.js";
-import { createCommunityEvent, parseEventLink } from "./create-event.js";
-import { registerEventAssistantTools } from "./assistant-tools.js";
 
 const actions = new Set(["eventRsvp", "eventDelete"]);
 const isClosed = (event: CommunityEvent) => Boolean(event.closedAt) || event.startsAt <= Math.floor(Date.now() / 1000);
@@ -23,7 +30,10 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
 
   async function create(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.inCachedGuild() || !interaction.channelId) {
-      await interaction.reply({ content: "Events can only be created in a server channel.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "Events can only be created in a server channel.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     const name = interaction.options.getString("name", true).trim();
@@ -32,14 +42,22 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       return;
     }
     let link: string | undefined;
-    try { link = parseEventLink(interaction.options.getString("link") ?? undefined); }
-    catch {
-      await interaction.reply({ content: "The event link must be a valid `http://` or `https://` URL.", flags: MessageFlags.Ephemeral });
+    try {
+      link = parseEventLink(interaction.options.getString("link") ?? undefined);
+    } catch {
+      await interaction.reply({
+        content: "The event link must be a valid `http://` or `https://` URL.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     const startsAt = parseDate(interaction.options.getString("when", true), config.timeZone);
     if (!startsAt) {
-      await interaction.reply({ content: "I couldn't understand that date and time. Try `2 october 7pm`, `08/15/2026 19:30`, or `2026-08-15 19:30-07:00`.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content:
+          "I couldn't understand that date and time. Try `2 october 7pm`, `08/15/2026 19:30`, or `2026-08-15 19:30-07:00`.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     if (startsAt <= Math.floor(Date.now() / 1000)) {
@@ -48,22 +66,43 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     }
     await interaction.deferReply();
     try {
-      await createCommunityEvent(client, store, {
-        guild: interaction.guild, channelId: interaction.channelId, creatorId: interaction.user.id, name, startsAt,
-        description: interaction.options.getString("description")?.trim() || undefined, link,
-        attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
-        durationMinutes: interaction.options.getInteger("duration") ?? 180,
-      }, (options) => interaction.editReply(options));
+      await createCommunityEvent(
+        client,
+        store,
+        {
+          guild: interaction.guild,
+          channelId: interaction.channelId,
+          creatorId: interaction.user.id,
+          name,
+          startsAt,
+          description: interaction.options.getString("description")?.trim() || undefined,
+          link,
+          attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
+          durationMinutes: interaction.options.getInteger("duration") ?? 180,
+        },
+        (options) => interaction.editReply(options),
+      );
     } catch (error) {
-      console.error("Could not create event", error);
+      logger.error("Could not create event", {
+        error,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        userId: interaction.user.id,
+      });
       await interaction.deleteReply().catch(() => undefined);
-      await interaction.followUp({ content: "I couldn't create the event. Check my channel and **Create Events** permissions.", flags: MessageFlags.Ephemeral });
+      await interaction.followUp({
+        content: "I couldn't create the event. Check my channel and **Create Events** permissions.",
+        flags: MessageFlags.Ephemeral,
+      });
     }
   }
 
   async function rsvp(interaction: ButtonInteraction, event: CommunityEvent, status: RsvpStatus): Promise<void> {
     if (!setRsvp(event.rsvps, interaction.user.id, status, event.attendanceLimit)) {
-      await interaction.reply({ content: "This event has reached its attendance limit.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "This event has reached its attendance limit.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
     await store.setEvent(event);
@@ -76,7 +115,9 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       return;
     }
     await interaction.deferUpdate();
-    await deleteScheduledEvent(client, event).catch((error) => console.error(`Could not delete scheduled event ${event.scheduledEventId}`, error));
+    await deleteScheduledEvent(client, event).catch((error) =>
+      logger.error("Could not delete scheduled event", { error, scheduledEventId: event.scheduledEventId }),
+    );
     await store.deleteEvent(event.id);
     await interaction.message.delete();
   }
@@ -87,31 +128,75 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     if (!action || !actions.has(action)) return false;
     const event = eventId ? store.getEvent(eventId) : undefined;
     if (!event) {
-      await interaction.reply({ content: "I couldn't find that event. It may have been removed.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "I couldn't find that event. It may have been removed.",
+        flags: MessageFlags.Ephemeral,
+      });
       return true;
     }
     if (isClosed(event) && action !== "eventDelete") {
-      if (!event.closedAt) { event.closedAt = Date.now(); await store.setEvent(event); await updateMessage(event).catch(() => undefined); }
-      await interaction.reply({ content: "This event has started and is no longer editable.", flags: MessageFlags.Ephemeral });
+      if (!event.closedAt) {
+        event.closedAt = Date.now();
+        await store.setEvent(event);
+        await updateMessage(event).catch(() => undefined);
+      }
+      await interaction.reply({
+        content: "This event has started and is no longer editable.",
+        flags: MessageFlags.Ephemeral,
+      });
       return true;
     }
-    if (action === "eventRsvp" && (value === "yes" || value === "maybe" || value === "no")) await rsvp(interaction, event, value);
+    if (action === "eventRsvp" && (value === "yes" || value === "maybe" || value === "no"))
+      await rsvp(interaction, event, value);
     else if (action === "eventDelete") await remove(interaction, event);
     return true;
   }
 
   return {
-    data: new SlashCommandBuilder().setName("event").setDescription("Organize an event").addSubcommand((command) => command
-      .setName("create").setDescription("Create a new event")
-      .addStringOption((option) => option.setName("name").setDescription("Event name").setMaxLength(100).setRequired(true))
-      .addStringOption((option) => option.setName("when").setDescription("Date and time, e.g. 2026-08-15 7:30 PM").setMaxLength(100).setRequired(true))
-      .addStringOption((option) => option.setName("description").setDescription("Optional event details").setMaxLength(1000))
-      .addStringOption((option) => option.setName("link").setDescription("Optional event URL").setMaxLength(512))
-      .addIntegerOption((option) => option.setName("duration").setDescription("Duration in minutes (default: 180)").setMinValue(15).setMaxValue(10080))
-      .addIntegerOption((option) => option.setName("attendance-limit").setDescription("Maximum number of people who can RSVP Going").setMinValue(1).setMaxValue(100000))).toJSON(),
-    async execute(interaction) { if (interaction.options.getSubcommand() === "create") await create(interaction); },
+    data: new SlashCommandBuilder()
+      .setName("event")
+      .setDescription("Organize an event")
+      .addSubcommand((command) =>
+        command
+          .setName("create")
+          .setDescription("Create a new event")
+          .addStringOption((option) =>
+            option.setName("name").setDescription("Event name").setMaxLength(100).setRequired(true),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("when")
+              .setDescription("Date and time, e.g. 2026-08-15 7:30 PM")
+              .setMaxLength(100)
+              .setRequired(true),
+          )
+          .addStringOption((option) =>
+            option.setName("description").setDescription("Optional event details").setMaxLength(1000),
+          )
+          .addStringOption((option) => option.setName("link").setDescription("Optional event URL").setMaxLength(512))
+          .addIntegerOption((option) =>
+            option
+              .setName("duration")
+              .setDescription("Duration in minutes (default: 180)")
+              .setMinValue(15)
+              .setMaxValue(10080),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("attendance-limit")
+              .setDescription("Maximum number of people who can RSVP Going")
+              .setMinValue(1)
+              .setMaxValue(100000),
+          ),
+      )
+      .toJSON(),
+    async execute(interaction) {
+      if (interaction.options.getSubcommand() === "create") await create(interaction);
+    },
     handleInteraction,
-    onReady() { startExpirationJob(store, updateMessage); },
+    onReady() {
+      startExpirationJob(store, updateMessage);
+    },
   };
 };
 

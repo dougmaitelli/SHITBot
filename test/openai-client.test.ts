@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import type { Guild } from "discord.js";
 import { OpenAICompatibleClient } from "../src/assistant/openai-client.js";
 import type { AssistantTool } from "../src/assistant/types.js";
+import type { Guild } from "discord.js";
 
 const originalFetch = globalThis.fetch;
-afterEach(() => { globalThis.fetch = originalFetch; });
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 function client() {
   return new OpenAICompatibleClient({
-    apiKey: "secret", baseUrl: "https://provider.example/v1/", model: "model", maxOutputTokens: 200, timeoutMs: 1000,
+    apiKey: "secret",
+    baseUrl: "https://provider.example/v1/",
+    model: "model",
+    maxOutputTokens: 200,
+    timeoutMs: 1000,
   });
 }
 
@@ -20,7 +26,8 @@ describe("OpenAICompatibleClient", () => {
     let request: { url?: string; authorization?: string; body?: Record<string, unknown> } = {};
     globalThis.fetch = async (input, init) => {
       request = {
-        url: String(input), authorization: new Headers(init?.headers).get("authorization") ?? undefined,
+        url: String(input),
+        authorization: new Headers(init?.headers).get("authorization") ?? undefined,
         body: JSON.parse(String(init?.body)) as Record<string, unknown>,
       };
       return new Response(JSON.stringify({ choices: [{ message: { content: "Hello" } }] }));
@@ -40,7 +47,10 @@ describe("OpenAICompatibleClient", () => {
       return new Response(JSON.stringify({ choices: [{ message: { content: "Hello" } }] }));
     };
     const unauthenticated = new OpenAICompatibleClient({
-      baseUrl: "http://localhost:1234/v1", model: "local", maxOutputTokens: 200, timeoutMs: 1000,
+      baseUrl: "http://localhost:1234/v1",
+      model: "local",
+      maxOutputTokens: 200,
+      timeoutMs: 1000,
     });
 
     assert.equal(await unauthenticated.respond("Hi", context, [], "System"), "Hello");
@@ -52,14 +62,38 @@ describe("OpenAICompatibleClient", () => {
     globalThis.fetch = async (_input, init) => {
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       requests.push(body);
-      return new Response(JSON.stringify(requests.length === 1
-        ? { choices: [{ message: { content: null, tool_calls: [{ id: "call", type: "function", function: { name: "create_event", arguments: "{\"name\":\"Party\"}" } }] } }] }
-        : { choices: [{ message: { content: "Done" } }] }));
+      return new Response(
+        JSON.stringify(
+          requests.length === 1
+            ? {
+                choices: [
+                  {
+                    message: {
+                      content: null,
+                      tool_calls: [
+                        {
+                          id: "call",
+                          type: "function",
+                          function: { name: "create_event", arguments: '{"name":"Party"}' },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }
+            : { choices: [{ message: { content: "Done" } }] },
+        ),
+      );
     };
     let received: unknown;
     const tool: AssistantTool = {
-      name: "create_event", description: "Create", parameters: { type: "object" },
-      async execute(_context, value) { received = value; return "Created Party"; },
+      name: "create_event",
+      description: "Create",
+      parameters: { type: "object" },
+      async execute(_context, value) {
+        received = value;
+        return "Created Party";
+      },
     };
 
     assert.equal(await client().respond("Create a party", context, [tool], "System"), "Done");
@@ -73,11 +107,18 @@ describe("OpenAICompatibleClient", () => {
     const requests: Array<Record<string, unknown>> = [];
     globalThis.fetch = async (_input, init) => {
       requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-      return new Response(JSON.stringify({ choices: [{ message: {
-        content: requests.length === 1
-          ? '{"tool_calls":[{"function":{"arguments":"{}"}}]}'
-          : "A normal answer.",
-      } }] }));
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  requests.length === 1 ? '{"tool_calls":[{"function":{"arguments":"{}"}}]}' : "A normal answer.",
+              },
+            },
+          ],
+        }),
+      );
     };
 
     assert.equal(await client().respond("General knowledge question", context, [], "System"), "A normal answer.");
@@ -92,9 +133,13 @@ describe("OpenAICompatibleClient", () => {
       return new Response(JSON.stringify({ choices: [{ message: { content: "Answer" } }] }));
     };
     const tool: AssistantTool = {
-      name: "restricted", description: "Restricted", parameters: { type: "object" },
+      name: "restricted",
+      description: "Restricted",
+      parameters: { type: "object" },
       isAvailable: () => false,
-      async execute() { throw new Error("Should not execute"); },
+      async execute() {
+        throw new Error("Should not execute");
+      },
     };
 
     assert.equal(await client().respond("Question", context, [tool], "System"), "Answer");

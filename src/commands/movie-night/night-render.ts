@@ -1,9 +1,4 @@
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-} from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { buildRsvpButtons, buildRsvpFields } from "../../shared/rsvp.js";
 import { buildSuggestionField } from "./suggestion-search-render.js";
 import type { MovieNight } from "./types.js";
@@ -32,7 +27,9 @@ function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
       { name: "Where", value: night.location, inline: true },
       ...activityFields,
     )
-    .setFooter({ text: closed ? "This movie night is closed" : night.votingOpen ? "Movie voting is open" : "RSVP below" });
+    .setFooter({
+      text: closed ? "This movie night is closed" : night.votingOpen ? "Movie voting is open" : "RSVP below",
+    });
 }
 
 function buildDeleteButton(night: MovieNight): ButtonBuilder {

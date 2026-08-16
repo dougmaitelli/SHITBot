@@ -1,10 +1,22 @@
-import type { Client, Guild } from "discord.js";
-import { createExternalScheduledEvent, deleteScheduledEvent as deleteSharedScheduledEvent } from "../../shared/scheduled-event.js";
+import {
+  createExternalScheduledEvent,
+  deleteScheduledEvent as deleteSharedScheduledEvent,
+} from "../../shared/scheduled-event.js";
 import type { CommunityEvent } from "./types.js";
+import type { Client, Guild } from "discord.js";
 
-export async function createScheduledEvent(guild: Guild, event: CommunityEvent, durationMinutes: number): Promise<string> {
-  const description = [event.description, `Organized by <@${event.creatorId}>. RSVP in <#${event.channelId}>.`, event.link]
-    .filter(Boolean).join("\n\n");
+export async function createScheduledEvent(
+  guild: Guild,
+  event: CommunityEvent,
+  durationMinutes: number,
+): Promise<string> {
+  const description = [
+    event.description,
+    `Organized by <@${event.creatorId}>. RSVP in <#${event.channelId}>.`,
+    event.link,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   return createExternalScheduledEvent(guild, {
     name: event.name,
     description,

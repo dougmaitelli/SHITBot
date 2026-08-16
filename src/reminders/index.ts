@@ -1,10 +1,15 @@
-import type { Client } from "discord.js";
 import { findUpcomingItem } from "../assistant/event-data.js";
+import { logger } from "../logger.js";
 import type { BotStore } from "../store.js";
 import type { EventReminder } from "./types.js";
 import type { UpcomingItem } from "../assistant/event-data.js";
+import type { Client } from "discord.js";
 
-async function resolveReminderItem(client: Client, store: BotStore, reminder: EventReminder): Promise<UpcomingItem | undefined> {
+async function resolveReminderItem(
+  client: Client,
+  store: BotStore,
+  reminder: EventReminder,
+): Promise<UpcomingItem | undefined> {
   const local = findUpcomingItem(store, reminder.guildId, reminder.targetRef);
   if (local) return local;
   const match = /^discord-event:(\d+)$/.exec(reminder.targetRef);
@@ -14,10 +19,17 @@ async function resolveReminderItem(client: Client, store: BotStore, reminder: Ev
     const event = await guild.scheduledEvents.fetch({ guildScheduledEvent: match[1], withUserCount: true });
     if (!event.scheduledStartTimestamp || event.isCanceled() || event.isCompleted()) return undefined;
     return {
-      ref: reminder.targetRef, kind: "event", guildId: reminder.guildId, channelId: event.channelId ?? "",
-      messageId: "", creatorId: event.creatorId ?? "", title: event.name,
+      ref: reminder.targetRef,
+      kind: "event",
+      guildId: reminder.guildId,
+      channelId: event.channelId ?? "",
+      messageId: "",
+      creatorId: event.creatorId ?? "",
+      title: event.name,
       startsAt: Math.floor(event.scheduledStartTimestamp / 1000),
-      details: event.description ?? undefined, rsvps: {}, url: event.url,
+      details: event.description ?? undefined,
+      rsvps: {},
+      url: event.url,
       discordInterestedCount: event.userCount ?? undefined,
     };
   } catch {
@@ -36,7 +48,9 @@ export async function sendReminder(client: Client, store: BotStore, reminder: Ev
       `⏰ **Reminder: ${item.title}**`,
       `<t:${item.startsAt}:F> · <t:${item.startsAt}:R> · [View event post](${postUrl})`,
       reminder.note,
-    ].filter(Boolean).join("\n"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
     allowedMentions: { parse: [] },
   });
 }
@@ -48,14 +62,20 @@ export async function sendDueReminders(client: Client, store: BotStore): Promise
       await sendReminder(client, store, reminder);
       await store.deleteReminder(reminder.id);
     } catch (error) {
-      if (!await resolveReminderItem(client, store, reminder)) await store.deleteReminder(reminder.id);
-      console.error(`Could not send reminder ${reminder.id}`, error);
+      if (!(await resolveReminderItem(client, store, reminder))) await store.deleteReminder(reminder.id);
+      logger.error("Could not send reminder", {
+        error,
+        reminderId: reminder.id,
+        guildId: reminder.guildId,
+        channelId: reminder.channelId,
+      });
     }
   }
 }
 
 export function startReminderJob(client: Client, store: BotStore): NodeJS.Timeout {
-  const run = () => void sendDueReminders(client, store).catch((error) => console.error("Could not process reminders", error));
+  const run = () =>
+    void sendDueReminders(client, store).catch((error) => logger.error("Could not process reminders", { error }));
   run();
   return setInterval(run, 30_000);
 }

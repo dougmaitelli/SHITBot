@@ -1,16 +1,16 @@
-import type { Client, Guild } from "discord.js";
-import { createExternalScheduledEvent, deleteScheduledEvent as deleteSharedScheduledEvent, renameScheduledEvent } from "../../shared/scheduled-event.js";
+import {
+  createExternalScheduledEvent,
+  deleteScheduledEvent as deleteSharedScheduledEvent,
+  renameScheduledEvent,
+} from "../../shared/scheduled-event.js";
 import type { MovieNight } from "./types.js";
+import type { Client, Guild } from "discord.js";
 
 function eventName(night: MovieNight): string {
   return (night.movie ? `Movie Night: ${night.movie}` : "Movie Night: Movie TBD").slice(0, 100);
 }
 
-export async function createScheduledEvent(
-  guild: Guild,
-  night: MovieNight,
-  durationMinutes: number,
-): Promise<string> {
+export async function createScheduledEvent(guild: Guild, night: MovieNight, durationMinutes: number): Promise<string> {
   return createExternalScheduledEvent(guild, {
     name: eventName(night),
     description: `Organized by <@${night.creatorId}>. RSVP and vote in <#${night.channelId}>.`,

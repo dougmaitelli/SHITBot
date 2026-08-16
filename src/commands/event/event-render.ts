@@ -21,7 +21,11 @@ export function renderEvent(event: CommunityEvent) {
   const embed = new EmbedBuilder()
     .setColor(closed ? 0x747f8d : 0x5865f2)
     .setTitle(`📅 ${event.name}`)
-    .setDescription(event.description ? `${event.description}\n\nOrganized by <@${event.creatorId}>` : `Organized by <@${event.creatorId}>`)
+    .setDescription(
+      event.description
+        ? `${event.description}\n\nOrganized by <@${event.creatorId}>`
+        : `Organized by <@${event.creatorId}>`,
+    )
     .addFields(
       { name: "When", value: `<t:${event.startsAt}:F>\n<t:${event.startsAt}:R>`, inline: true },
       ...details,
@@ -31,7 +35,11 @@ export function renderEvent(event: CommunityEvent) {
 
   const rsvps = buildRsvpButtons(event.id, "eventRsvp", closed);
   const actions = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder().setCustomId(`eventDelete:${event.id}`).setLabel("Delete event").setEmoji("🗑️").setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`eventDelete:${event.id}`)
+      .setLabel("Delete event")
+      .setEmoji("🗑️")
+      .setStyle(ButtonStyle.Danger),
   );
   return { embeds: [embed], components: [rsvps, actions] };
 }

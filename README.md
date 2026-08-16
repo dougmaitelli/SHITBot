@@ -97,6 +97,10 @@ Scheduled reminders persist across restarts and are posted within about 30 secon
 
 Requests are single-turn and do not include channel history. Defaults limit prompts to 500 characters and responses to both 400 provider tokens and 1,600 displayed characters. Responses exceeding the character cap are truncated before being posted to Discord. Each user may make 5 requests and each server may make 30 requests per 5-minute window, with one request in flight per user. Configure these with `AI_MAX_INPUT_CHARACTERS`, `AI_MAX_OUTPUT_CHARACTERS`, `AI_MAX_OUTPUT_TOKENS`, `AI_USER_RATE_LIMIT`, `AI_GUILD_RATE_LIMIT`, `AI_RATE_LIMIT_WINDOW_MS`, and `AI_TIMEOUT_MS`.
 
+Runtime logs are newline-delimited JSON and include Discord lifecycle, shard, command, background-job, assistant, tool, and AI-provider failures. Assistant logs include request IDs and timing but not prompt text, API keys, or tool-result contents. A local `/health` endpoint (port `3000` by default) reports whether Discord is ready, and the image includes a Docker health check. Because Docker restart policies react to process exits rather than unhealthy status alone, the bot exits after Discord remains unready for 5 minutes so `restart: unless-stopped` can recover it. Configure this with `HEALTH_PORT`, `BOT_HEARTBEAT_MS`, and `DISCORD_UNREADY_EXIT_MS`.
+
+Run `npm run check` to type-check, lint, and verify formatting. Use `npm run lint:fix` for safe ESLint fixes and `npm run format` to apply Prettier. `LOG_LEVEL` controls Pino verbosity and defaults to `info`.
+
 ## Production
 
 ```bash

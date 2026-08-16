@@ -2,16 +2,23 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { GuildScheduledEventStatus, type Client, type Guild, type GuildScheduledEvent } from "discord.js";
 import { registerEventAssistantTools } from "../src/commands/event/assistant-tools.js";
-import type { AssistantTool } from "../src/assistant/types.js";
 import { BotStore } from "../src/store.js";
+import type { AssistantTool } from "../src/assistant/types.js";
 
 describe("Discord scheduled-event assistant tools", () => {
   it("lists scheduled events that were not created by the bot", async () => {
     const future = Date.now() + 3_600_000;
     const scheduled = {
-      id: "123", guildId: "guild", channelId: null, creatorId: "creator", name: "Community Town Hall",
-      description: "Monthly update", scheduledStartTimestamp: future, status: GuildScheduledEventStatus.Scheduled,
-      entityMetadata: { location: "Main Hall" }, userCount: 42,
+      id: "123",
+      guildId: "guild",
+      channelId: null,
+      creatorId: "creator",
+      name: "Community Town Hall",
+      description: "Monthly update",
+      scheduledStartTimestamp: future,
+      status: GuildScheduledEventStatus.Scheduled,
+      entityMetadata: { location: "Main Hall" },
+      userCount: 42,
       url: "https://discord.com/events/guild/123",
     } as unknown as GuildScheduledEvent;
     const guild = {
@@ -22,7 +29,13 @@ describe("Discord scheduled-event assistant tools", () => {
       channels: { fetch: async () => ({ isTextBased: () => true, isDMBased: () => false, name: "general" }) },
     } as unknown as Client;
     const tools: AssistantTool[] = [];
-    registerEventAssistantTools(client, new BotStore("/tmp/moviebot-discord-events-test.json"), tools, "UTC", "movie-nights");
+    registerEventAssistantTools(
+      client,
+      new BotStore("/tmp/moviebot-discord-events-test.json"),
+      tools,
+      "UTC",
+      "movie-nights",
+    );
 
     const list = tools.find((tool) => tool.name === "list_upcoming_events")!;
     const result = JSON.parse(await list.execute({ guild, channelId: "general", userId: "user" }, {})) as {

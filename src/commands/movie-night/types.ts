@@ -1,5 +1,6 @@
-export type { RsvpStatus } from "../../shared/rsvp.js";
 import type { RsvpStatus } from "../../shared/rsvp.js";
+
+export type { RsvpStatus } from "../../shared/rsvp.js";
 
 export interface MovieSuggestion {
   id: string;

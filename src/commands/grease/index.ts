@@ -17,7 +17,10 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
       if (!interaction.inCachedGuild()) {
-        await interaction.reply({ content: "The grease command can only be used in a server.", flags: MessageFlags.Ephemeral });
+        await interaction.reply({
+          content: "The grease command can only be used in a server.",
+          flags: MessageFlags.Ephemeral,
+        });
         return;
       }
 

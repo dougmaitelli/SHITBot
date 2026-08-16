@@ -22,7 +22,10 @@ function timeZoneOffsetMilliseconds(timeZone: string, instant: Date): number {
   }).formatToParts(instant);
   const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
   const instantWithoutMilliseconds = Math.floor(instant.getTime() / 1000) * 1000;
-  return Date.UTC(value("year"), value("month") - 1, value("day"), value("hour"), value("minute"), value("second")) - instantWithoutMilliseconds;
+  return (
+    Date.UTC(value("year"), value("month") - 1, value("day"), value("hour"), value("minute"), value("second")) -
+    instantWithoutMilliseconds
+  );
 }
 
 function zonedDateTimeToDate(parts: DateTimeParts, timeZone: string): Date {
@@ -48,7 +51,8 @@ export function parseDate(input: string, timeZone: string, now = new Date()): nu
   const currentOffsetMinutes = timeZoneOffsetMilliseconds(timeZone, now) / 60_000;
   const result = chrono.parse(input.trim(), { instant: now, timezone: currentOffsetMinutes }, { forwardDate: true })[0];
   if (!result) return null;
-  if (!result.start.isCertain("month") || !result.start.isCertain("day") || !result.start.isCertain("hour")) return null;
+  if (!result.start.isCertain("month") || !result.start.isCertain("day") || !result.start.isCertain("hour"))
+    return null;
 
   const numericOffset = explicitOffsetMinutes(input);
   if (numericOffset !== null) {

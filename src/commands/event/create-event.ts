@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { Client, Guild } from "discord.js";
-import type { BotStore } from "../../store.js";
 import { renderEvent } from "./event-render.js";
 import { createScheduledEvent, deleteScheduledEvent } from "./scheduled-event.js";
 import type { CommunityEvent } from "./types.js";
+import type { BotStore } from "../../store.js";
+import type { Client, Guild } from "discord.js";
 
 export interface CreateCommunityEventInput {
   guild: Guild;
@@ -25,7 +25,9 @@ export function parseEventLink(value: string | undefined): string | undefined {
   return link;
 }
 
-type SendEventMessage = (options: ReturnType<typeof renderEvent>) => Promise<{ id: string; delete(): Promise<unknown> }>;
+type SendEventMessage = (
+  options: ReturnType<typeof renderEvent>,
+) => Promise<{ id: string; delete(): Promise<unknown> }>;
 
 export async function createCommunityEvent(
   client: Client,
@@ -34,10 +36,18 @@ export async function createCommunityEvent(
   sendMessage: SendEventMessage,
 ): Promise<CommunityEvent> {
   const event: CommunityEvent = {
-    id: randomUUID().slice(0, 8), guildId: input.guild.id, channelId: input.channelId,
-    messageId: "", creatorId: input.creatorId, name: input.name, startsAt: input.startsAt,
-    description: input.description, link: input.link, attendanceLimit: input.attendanceLimit,
-    rsvps: {}, createdAt: Date.now(),
+    id: randomUUID().slice(0, 8),
+    guildId: input.guild.id,
+    channelId: input.channelId,
+    messageId: "",
+    creatorId: input.creatorId,
+    name: input.name,
+    startsAt: input.startsAt,
+    description: input.description,
+    link: input.link,
+    attendanceLimit: input.attendanceLimit,
+    rsvps: {},
+    createdAt: Date.now(),
   };
   event.scheduledEventId = await createScheduledEvent(input.guild, event, input.durationMinutes);
   let message: Awaited<ReturnType<SendEventMessage>> | undefined;

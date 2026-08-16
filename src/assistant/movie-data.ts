@@ -22,7 +22,9 @@ export function summarizeMovieNightSuggestions(store: BotStore, guildId: string,
     voting_open: night.votingOpen,
     selected_movie: night.movie,
     total_votes: suggestions.reduce((total, suggestion) => total + suggestion.votes, 0),
-    leaders: suggestions.filter((suggestion) => suggestion.votes === highestVotes && highestVotes > 0).map((suggestion) => suggestion.title),
+    leaders: suggestions
+      .filter((suggestion) => suggestion.votes === highestVotes && highestVotes > 0)
+      .map((suggestion) => suggestion.title),
     suggestions,
   };
 }

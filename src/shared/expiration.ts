@@ -1,3 +1,5 @@
+import { logger } from "../logger.js";
+
 export interface Expirable {
   id: string;
   startsAt: number;
@@ -17,16 +19,19 @@ export async function closeExpired<T extends Expirable>(options: ExpirationOptio
   for (const item of options.list().filter((candidate) => !candidate.closedAt && candidate.startsAt <= now)) {
     item.closedAt = Date.now();
     await options.save(item);
-    await options.updateMessage(item).catch((error) =>
-      console.error(`Could not update closed ${options.itemName} ${item.id}`, error),
-    );
+    await options
+      .updateMessage(item)
+      .catch((error) =>
+        logger.error("Could not update closed item message", { error, itemType: options.itemName, itemId: item.id }),
+      );
   }
 }
 
 export function startExpirationJob<T extends Expirable>(options: ExpirationOptions<T>): NodeJS.Timeout {
-  const run = () => void closeExpired(options).catch((error) =>
-    console.error(`Could not close expired ${options.itemName}s`, error),
-  );
+  const run = () =>
+    void closeExpired(options).catch((error) =>
+      logger.error("Could not close expired items", { error, itemType: options.itemName }),
+    );
   run();
   return setInterval(run, options.intervalMs ?? 30_000);
 }
