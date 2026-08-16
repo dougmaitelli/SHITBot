@@ -65,23 +65,25 @@ describe("OpenAICompatibleClient", () => {
       return new Response(
         JSON.stringify(
           requests.length === 1
-            ? {
-                choices: [
-                  {
-                    message: {
-                      content: null,
-                      tool_calls: [
-                        {
-                          id: "call",
-                          type: "function",
-                          function: { name: "create_event", arguments: '{"name":"Party"}' },
-                        },
-                      ],
+            ? { choices: [{ message: { content: "[[USE_DISCORD_TOOLS]]" } }] }
+            : requests.length === 2
+              ? {
+                  choices: [
+                    {
+                      message: {
+                        content: null,
+                        tool_calls: [
+                          {
+                            id: "call",
+                            type: "function",
+                            function: { name: "create_event", arguments: '{"name":"Party"}' },
+                          },
+                        ],
+                      },
                     },
-                  },
-                ],
-              }
-            : { choices: [{ message: { content: "Done" } }] },
+                  ],
+                }
+              : { choices: [{ message: { content: "Done" } }] },
         ),
       );
     };
@@ -98,9 +100,30 @@ describe("OpenAICompatibleClient", () => {
 
     assert.equal(await client().respond("Create a party", context, [tool], "System"), "Done");
     assert.deepEqual(received, { name: "Party" });
-    const secondMessages = requests[1]?.messages as Array<{ role: string; content: string }>;
-    assert.equal(secondMessages.at(-1)?.role, "tool");
-    assert.equal(secondMessages.at(-1)?.content, "Created Party");
+    assert.equal(requests[0]?.tools, undefined);
+    const finalMessages = requests[2]?.messages as Array<{ role: string; content: string }>;
+    assert.equal(finalMessages.at(-1)?.role, "tool");
+    assert.equal(finalMessages.at(-1)?.content, "Created Party");
+  });
+
+  it("does not advertise tools when an ordinary request can be answered directly", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    globalThis.fetch = async (_input, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({ choices: [{ message: { content: "Hello!" } }] }));
+    };
+    const tool: AssistantTool = {
+      name: "list_upcoming_events",
+      description: "List events",
+      parameters: { type: "object" },
+      async execute() {
+        throw new Error("Should not execute");
+      },
+    };
+
+    assert.equal(await client().respond("Hi", context, [tool], "System"), "Hello!");
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0]?.tools, undefined);
   });
 
   it("retries instead of exposing tool protocol emitted as text", async () => {
