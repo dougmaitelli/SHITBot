@@ -12,6 +12,7 @@ SHITBot is a Discord bot for coordinating movie nights and other events. It supp
 - Creating named events in any server channel with a required date/time
 - Optional event descriptions and links, plus Going, Maybe, and Can't-go RSVPs
 - Discord scheduled-event creation and automatic closure for both event types
+- Optional mention-based AI assistant with event and movie-night creation tools
 
 ## Requirements
 
@@ -45,6 +46,8 @@ Grant the bot role these permissions:
 - **Create Events** lets it integrate with Discord scheduled events.
 - **Mention Everyone** lets it notify `@everyone`, `@here`, and otherwise non-mentionable roles when coordination requires it.
 
+The mention-based AI assistant uses the non-privileged **Guild Messages** gateway intent. Discord exposes message content when the bot is directly mentioned, so the privileged **Message Content** intent is not required for this interaction style.
+
 Channel-specific permission overrides still apply. Grant these permissions in `#movie-nights` and in any other channel where the bot should be able to send messages. The bot does not need **Administrator**, **Manage Messages**, **Add Reactions**, or any privileged gateway intents.
 
 ## Run locally
@@ -77,6 +80,14 @@ If `movie` is omitted, suggestion and voting controls appear automatically. The 
 Use `/event create` in any server channel for a non-movie event. `name` and `when` are required; `description`, `link`, `duration`, and `attendance-limit` are optional. Like movie nights, the bot creates a Discord scheduled event, provides RSVP buttons, and disables RSVPs once the start time passes.
 
 Both `/event create` and `/movie-night create` accept an optional `attendance-limit`. Once that many people have selected **Going**, additional Going responses are rejected until someone changes their response. Maybe and Can't-go responses do not count toward the limit.
+
+## AI assistant
+
+Set `OPENAI_API_KEY` to enable the assistant, then mention the bot in a server channel and include a request. The client uses the OpenAI-compatible `/v1/chat/completions` API. `OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`, and `OPENAI_MODEL` defaults to `gpt-4o-mini`; override either for another compatible provider.
+
+The assistant can answer short questions and create events or movie nights. General events are posted in the current channel. Movie nights are posted in the configured movie-night channel. Creation uses the mentioning user as organizer and follows the same validation and persistence paths as the slash commands.
+
+Requests are single-turn and do not include channel history. Defaults limit prompts to 2,000 characters and responses to 500 tokens. Each user may make 5 requests and each server may make 30 requests per 5-minute window, with one request in flight per user. Configure these with `AI_MAX_INPUT_CHARACTERS`, `AI_MAX_OUTPUT_TOKENS`, `AI_USER_RATE_LIMIT`, `AI_GUILD_RATE_LIMIT`, `AI_RATE_LIMIT_WINDOW_MS`, and `AI_TIMEOUT_MS`.
 
 ## Production
 

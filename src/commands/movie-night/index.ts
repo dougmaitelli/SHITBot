@@ -19,11 +19,30 @@ import { setRsvp } from "../../shared/rsvp.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { renderNight } from "./night-render.js";
 import { renderSuggestion } from "./suggestion-render.js";
-import { createScheduledEvent, deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
+import { deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
+import { createMovieNight } from "./create-night.js";
 import { TmdbClient, type MovieDetails, type MovieMatch } from "./tmdb.js";
 import type { MovieNight, MovieSuggestion, RsvpStatus } from "./types.js";
 
 const MAX_SUGGESTIONS = 25;
+
+interface MovieNightToolArguments {
+  when: string; location: string; movie?: string;
+  duration_minutes?: number; attendance_limit?: number;
+}
+
+function parseMovieNightToolArguments(value: unknown): MovieNightToolArguments {
+  if (!value || typeof value !== "object") throw new Error("Movie-night details must be an object.");
+  const input = value as Record<string, unknown>;
+  if (typeof input.when !== "string" || !input.when.trim()) throw new Error("A date and time are required.");
+  if (typeof input.location !== "string" || !input.location.trim()) throw new Error("A location is required.");
+  if (input.movie !== undefined && typeof input.movie !== "string") throw new Error("Movie must be text.");
+  const duration = input.duration_minutes;
+  if (duration !== undefined && (!Number.isInteger(duration) || (duration as number) < 30 || (duration as number) > 720)) throw new Error("Duration must be from 30 to 720 minutes.");
+  const limit = input.attendance_limit;
+  if (limit !== undefined && (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100000)) throw new Error("Attendance limit must be from 1 to 100000.");
+  return input as unknown as MovieNightToolArguments;
+}
 
 const componentActions = new Set([
   "rsvp",
@@ -42,7 +61,7 @@ function isClosed(night: MovieNight): boolean {
   return Boolean(night.closedAt) || night.startsAt <= Math.floor(Date.now() / 1000);
 }
 
-const createMovieNightCommand: CommandFactory = ({ client, store, config }): CommandModule => {
+const createMovieNightCommand: CommandFactory = ({ client, store, config, assistantTools }): CommandModule => {
   const channelName = config.movieNightsChannel.replace(/^#/, "");
   const tmdb = new TmdbClient(config.tmdbApiToken);
   const pendingMatches = new Map<string, {
@@ -128,46 +147,59 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
     }
 
     const movie = interaction.options.getString("movie")?.trim() || null;
-    const night: MovieNight = {
-      id: randomUUID().slice(0, 8),
-      guildId: interaction.guildId,
-      channelId: interaction.channelId,
-      messageId: "",
-      creatorId: interaction.user.id,
-      startsAt,
-      location: interaction.options.getString("location", true).trim(),
-      movie,
-      votingOpen: movie === null,
-      attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
-      rsvps: {},
-      suggestions: [],
-      createdAt: Date.now(),
-    };
-
-    const durationMinutes = interaction.options.getInteger("duration") ?? 180;
     await interaction.deferReply();
     try {
-      night.scheduledEventId = await createScheduledEvent(interaction.guild, night, durationMinutes);
+      await createMovieNight(client, store, {
+        guild: interaction.guild, channelId: interaction.channelId, creatorId: interaction.user.id, startsAt,
+        location: interaction.options.getString("location", true).trim(), movie,
+        attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
+        durationMinutes: interaction.options.getInteger("duration") ?? 180,
+      }, (options) => interaction.editReply(options));
     } catch (error) {
-      console.error("Could not create Discord scheduled event", error);
+      console.error("Could not create movie night", error);
       await interaction.deleteReply().catch(() => undefined);
       await interaction.followUp({
-        content: "I couldn't create the Discord event. Check that I have the **Create Events** permission.",
+        content: "I couldn't create the movie night. Check my channel and **Create Events** permissions.",
         flags: MessageFlags.Ephemeral,
       });
-      return;
-    }
-
-    try {
-      const message = await interaction.editReply(renderNight(night));
-      night.messageId = message.id;
-      await store.set(night);
-    } catch (error) {
-      await deleteScheduledEvent(client, night).catch(() => undefined);
-      await interaction.deleteReply().catch(() => undefined);
-      throw error;
     }
   }
+
+  assistantTools.push({
+    name: "create_movie_night",
+    description: `Create a movie night in #${channelName}. Use only when explicitly requested. Omit movie to enable suggestions and voting.`,
+    parameters: {
+      type: "object", additionalProperties: false, required: ["when", "location"],
+      properties: {
+        when: { type: "string", description: `Date and time; defaults to ${config.timeZone} when no offset is given` },
+        location: { type: "string", description: "Location, maximum 200 characters" },
+        movie: { type: "string", description: "Optional selected movie; omit for suggestions and voting" },
+        duration_minutes: { type: "integer", minimum: 30, maximum: 720, description: "Defaults to 180" },
+        attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
+      },
+    },
+    async execute(context, value) {
+      const input = parseMovieNightToolArguments(value);
+      const startsAt = parseDate(input.when, config.timeZone);
+      if (!startsAt) throw new Error("I couldn't understand the movie-night date and time.");
+      if (startsAt <= Math.floor(Date.now() / 1000)) throw new Error("The movie night must be scheduled in the future.");
+      const location = input.location.trim();
+      if (location.length > 200) throw new Error("The location must be at most 200 characters.");
+      const movie = input.movie?.trim() || null;
+      if (movie && movie.length > 100) throw new Error("The movie title must be at most 100 characters.");
+      let channel = context.guild.channels.cache.find((candidate) => candidate.name === channelName);
+      if (!channel) {
+        await context.guild.channels.fetch();
+        channel = context.guild.channels.cache.find((candidate) => candidate.name === channelName);
+      }
+      if (!channel?.isTextBased() || !channel.isSendable()) throw new Error(`I couldn't find or send to #${channelName}.`);
+      const night = await createMovieNight(client, store, {
+        guild: context.guild, channelId: channel.id, creatorId: context.userId, startsAt, location, movie,
+        attendanceLimit: input.attendance_limit, durationMinutes: input.duration_minutes ?? 180,
+      }, (options) => channel.send(options));
+      return `Created the movie night for <t:${night.startsAt}:F> in <#${night.channelId}>.`;
+    },
+  });
 
   async function handleRsvp(interaction: ButtonInteraction, night: MovieNight, status: RsvpStatus): Promise<void> {
     if (!setRsvp(night.rsvps, interaction.user.id, status, night.attendanceLimit)) {

@@ -3,10 +3,20 @@ import { Client, Events, GatewayIntentBits, MessageFlags, REST, Routes, type Int
 import { loadCommandFactories } from "./commands/load.js";
 import type { CommandContext, CommandModule } from "./commands/types.js";
 import { BotStore } from "./store.js";
+import { startAssistant } from "./assistant/index.js";
+import type { AssistantTool } from "./assistant/types.js";
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function positiveIntegerEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
   return value;
 }
 
@@ -23,12 +33,14 @@ const token = requiredEnv("DISCORD_TOKEN");
 const clientId = requiredEnv("DISCORD_CLIENT_ID");
 const guildId = process.env.DISCORD_GUILD_ID;
 const store = new BotStore(process.env.DATA_FILE ?? "./data/movie-nights.json");
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 const commandFactories = await loadCommandFactories();
+const assistantTools: AssistantTool[] = [];
 
 const commandContext: CommandContext = {
   client,
   store,
+  assistantTools,
   config: {
     timeZone: process.env.TZ ?? "America/Los_Angeles",
     movieNightsChannel: process.env.MOVIE_NIGHTS_CHANNEL ?? "movie-nights",
@@ -37,6 +49,24 @@ const commandContext: CommandContext = {
 };
 const commandModules: CommandModule[] = commandFactories.map((createCommand) => createCommand(commandContext));
 const commandsByName = new Map(commandModules.map((command) => [command.data.name, command]));
+
+const openAIApiKey = process.env.OPENAI_API_KEY;
+if (openAIApiKey) {
+  startAssistant(client, assistantTools, {
+    apiKey: openAIApiKey,
+    baseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+    model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+    maxInputCharacters: positiveIntegerEnv("AI_MAX_INPUT_CHARACTERS", 2000),
+    maxOutputTokens: positiveIntegerEnv("AI_MAX_OUTPUT_TOKENS", 500),
+    userRequestsPerWindow: positiveIntegerEnv("AI_USER_RATE_LIMIT", 5),
+    guildRequestsPerWindow: positiveIntegerEnv("AI_GUILD_RATE_LIMIT", 30),
+    rateLimitWindowMs: positiveIntegerEnv("AI_RATE_LIMIT_WINDOW_MS", 5 * 60_000),
+    timeoutMs: positiveIntegerEnv("AI_TIMEOUT_MS", 30_000),
+    timeZone: commandContext.config.timeZone,
+  });
+} else {
+  console.log("AI assistant disabled: OPENAI_API_KEY is not configured");
+}
 
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
