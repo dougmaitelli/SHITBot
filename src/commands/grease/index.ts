@@ -2,12 +2,17 @@ import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } f
 import type { CommandFactory, CommandModule } from "../types.js";
 
 const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+export const GREASE_SUCCESS_CHANCE = 0.05;
+
+export function greaseSucceeds(random: () => number = Math.random): boolean {
+  return random() < GREASE_SUCCESS_CHANCE;
+}
 
 const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
   return {
     data: new SlashCommandBuilder()
       .setName("grease")
-      .setDescription("Send grease to every other text channel (global 30-day cooldown)")
+      .setDescription("Send grease to every other text channel")
       .toJSON(),
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -27,8 +32,16 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
         return;
       }
 
-      // Claim the cooldown synchronously before yielding so concurrent uses cannot both pass the check.
+      // Every attempt claims the cooldown before yielding so concurrent uses cannot both pass the check.
       const cooldownSave = store.setGreaseLastUsedAt(now);
+      const succeeded = greaseSucceeds();
+
+      if (!succeeded) {
+        await cooldownSave;
+        await interaction.reply({ content: `<@${interaction.user.id}> tried to cast grease and failed.` });
+        return;
+      }
+
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       await cooldownSave;
 
