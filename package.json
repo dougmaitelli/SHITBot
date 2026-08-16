@@ -2,7 +2,7 @@
   "name": "shitbot",
   "version": "0.1.0",
   "private": true,
-  "description": "SHITBot coordinates movie nights with RSVPs and movie voting.",
+  "description": "SHITBot coordinates movie nights and events with RSVPs.",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

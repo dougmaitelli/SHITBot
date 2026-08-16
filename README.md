@@ -1,6 +1,6 @@
 # SHITBot
 
-SHITBot is a Discord bot for coordinating movie nights. It supports:
+SHITBot is a Discord bot for coordinating movie nights and other events. It supports:
 
 - Creating a movie night with a date/time, location, and optional movie
 - Going, maybe, and can't-go RSVPs
@@ -9,6 +9,9 @@ SHITBot is a Discord bot for coordinating movie nights. It supports:
 - Organizer-only deletion of movie nights
 - Automatic closing and disabled controls when a movie night starts
 - Local JSON persistence across restarts
+- Creating named events in any server channel with a required date/time
+- Optional event descriptions and links, plus Going, Maybe, and Can't-go RSVPs
+- Discord scheduled-event creation and automatic closure for both event types
 
 ## Requirements
 
@@ -70,6 +73,10 @@ Use `/movie-night create`. The `when` field accepts common date/time formats, in
 Times without an explicit offset use the `TZ` setting from `.env`. Inputs with a numeric UTC offset override that setting.
 
 If `movie` is omitted, suggestion and voting controls appear automatically. The organizer can close voting with **Define movie**.
+
+Use `/event create` in any server channel for a non-movie event. `name` and `when` are required; `description`, `link`, `duration`, and `attendance-limit` are optional. Like movie nights, the bot creates a Discord scheduled event, provides RSVP buttons, and disables RSVPs once the start time passes.
+
+Both `/event create` and `/movie-night create` accept an optional `attendance-limit`. Once that many people have selected **Going**, additional Going responses are rejected until someone changes their response. Maybe and Can't-go responses do not count toward the limit.
 
 ## Production
 

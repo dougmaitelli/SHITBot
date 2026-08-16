@@ -1,21 +1,24 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { MovieNight } from "./commands/movie-night/types.js";
+import type { CommunityEvent } from "./commands/event/types.js";
 
 interface StoreData {
   nights: Record<string, MovieNight>;
+  events: Record<string, CommunityEvent>;
   greaseLastUsedAt?: number;
 }
 
 export class BotStore {
-  private data: StoreData = { nights: {} };
+  private data: StoreData = { nights: {}, events: {} };
   private saveQueue = Promise.resolve();
 
   constructor(private readonly filename: string) {}
 
   async load(): Promise<void> {
     try {
-      this.data = JSON.parse(await readFile(this.filename, "utf8")) as StoreData;
+      const saved = JSON.parse(await readFile(this.filename, "utf8")) as Partial<StoreData>;
+      this.data = { nights: saved.nights ?? {}, events: saved.events ?? {}, greaseLastUsedAt: saved.greaseLastUsedAt };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       await this.save();
@@ -37,6 +40,24 @@ export class BotStore {
 
   delete(id: string): Promise<void> {
     delete this.data.nights[id];
+    return this.save();
+  }
+
+  getEvent(id: string): CommunityEvent | undefined {
+    return this.data.events[id];
+  }
+
+  listEvents(): CommunityEvent[] {
+    return Object.values(this.data.events);
+  }
+
+  setEvent(event: CommunityEvent): Promise<void> {
+    this.data.events[event.id] = event;
+    return this.save();
+  }
+
+  deleteEvent(id: string): Promise<void> {
+    delete this.data.events[id];
     return this.save();
   }
 

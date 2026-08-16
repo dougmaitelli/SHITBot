@@ -15,6 +15,7 @@ import {
 } from "discord.js";
 import type { CommandFactory, CommandModule } from "../types.js";
 import { parseDate } from "../../utils/date-parser.js";
+import { setRsvp } from "../../shared/rsvp.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { renderNight } from "./night-render.js";
 import { renderSuggestion } from "./suggestion-render.js";
@@ -137,6 +138,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
       location: interaction.options.getString("location", true).trim(),
       movie,
       votingOpen: movie === null,
+      attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
       rsvps: {},
       suggestions: [],
       createdAt: Date.now(),
@@ -168,7 +170,10 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
   }
 
   async function handleRsvp(interaction: ButtonInteraction, night: MovieNight, status: RsvpStatus): Promise<void> {
-    night.rsvps[interaction.user.id] = status;
+    if (!setRsvp(night.rsvps, interaction.user.id, status, night.attendanceLimit)) {
+      await interaction.reply({ content: "This movie night has reached its attendance limit.", flags: MessageFlags.Ephemeral });
+      return;
+    }
     await store.set(night);
     await interaction.update(renderNight(night));
   }
@@ -546,6 +551,13 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config }): Com
               .setDescription("Duration in minutes (default: 180)")
               .setMinValue(30)
               .setMaxValue(720),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("attendance-limit")
+              .setDescription("Maximum number of people who can RSVP Going")
+              .setMinValue(1)
+              .setMaxValue(100000),
           ),
       )
       .toJSON(),

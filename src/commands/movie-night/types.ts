@@ -1,4 +1,5 @@
-export type RsvpStatus = "yes" | "maybe" | "no";
+export type { RsvpStatus } from "../../shared/rsvp.js";
+import type { RsvpStatus } from "../../shared/rsvp.js";
 
 export interface MovieSuggestion {
   id: string;
@@ -25,6 +26,7 @@ export interface MovieNight {
   location: string;
   movie: string | null;
   votingOpen: boolean;
+  attendanceLimit?: number;
   rsvps: Record<string, RsvpStatus>;
   suggestions: MovieSuggestion[];
   createdAt: number;

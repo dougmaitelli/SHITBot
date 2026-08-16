@@ -3,35 +3,17 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
-  type APIEmbedField,
 } from "discord.js";
+import { buildRsvpButtons, buildRsvpFields } from "../../shared/rsvp.js";
 import { buildSuggestionField } from "./suggestion-search-render.js";
-import type { MovieNight, RsvpStatus } from "./types.js";
-
-const labels: Record<RsvpStatus, string> = { yes: "Going", maybe: "Maybe", no: "Can't go" };
+import type { MovieNight } from "./types.js";
 
 function isClosed(night: MovieNight): boolean {
   return Boolean(night.closedAt) || night.startsAt <= Math.floor(Date.now() / 1000);
 }
 
-function mentions(night: MovieNight, status: RsvpStatus): string {
-  const users = Object.entries(night.rsvps)
-    .filter(([, value]) => value === status)
-    .map(([id]) => `<@${id}>`);
-  const value = users.length ? users.join(", ") : "Nobody yet";
-  return value.length > 1024 ? `${value.slice(0, 1021)}...` : value;
-}
-
-function buildRsvpFields(night: MovieNight): APIEmbedField[] {
-  return (["yes", "maybe", "no"] as RsvpStatus[]).map((status) => ({
-    name: `${labels[status]} (${Object.values(night.rsvps).filter((value) => value === status).length})`,
-    value: mentions(night, status),
-    inline: true,
-  }));
-}
-
 function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
-  const activityFields = buildRsvpFields(night);
+  const activityFields = buildRsvpFields(night.rsvps, night.attendanceLimit);
   if (night.scheduledEventId) {
     activityFields.unshift({
       name: "Discord event",
@@ -51,14 +33,6 @@ function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
       ...activityFields,
     )
     .setFooter({ text: closed ? "This movie night is closed" : night.votingOpen ? "Movie voting is open" : "RSVP below" });
-}
-
-function buildRsvpButtons(night: MovieNight, closed: boolean): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder().setCustomId(`rsvp:${night.id}:yes`).setLabel("Going").setEmoji("✅").setStyle(ButtonStyle.Success).setDisabled(closed),
-    new ButtonBuilder().setCustomId(`rsvp:${night.id}:maybe`).setLabel("Maybe").setEmoji("🤔").setStyle(ButtonStyle.Secondary).setDisabled(closed),
-    new ButtonBuilder().setCustomId(`rsvp:${night.id}:no`).setLabel("Can't go").setEmoji("✖️").setStyle(ButtonStyle.Danger).setDisabled(closed),
-  );
 }
 
 function buildDeleteButton(night: MovieNight): ButtonBuilder {
@@ -100,6 +74,6 @@ export function renderNight(night: MovieNight) {
   const closed = isClosed(night);
   return {
     embeds: [buildEmbed(night, closed)],
-    components: [buildRsvpButtons(night, closed), buildActionButtons(night, closed)],
+    components: [buildRsvpButtons(night.id, "rsvp", closed), buildActionButtons(night, closed)],
   };
 }

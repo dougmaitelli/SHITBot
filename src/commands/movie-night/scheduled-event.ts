@@ -1,9 +1,5 @@
-import {
-  GuildScheduledEventEntityType,
-  GuildScheduledEventPrivacyLevel,
-  type Client,
-  type Guild,
-} from "discord.js";
+import type { Client, Guild } from "discord.js";
+import { createExternalScheduledEvent, deleteScheduledEvent as deleteSharedScheduledEvent, renameScheduledEvent } from "../../shared/scheduled-event.js";
 import type { MovieNight } from "./types.js";
 
 function eventName(night: MovieNight): string {
@@ -15,27 +11,19 @@ export async function createScheduledEvent(
   night: MovieNight,
   durationMinutes: number,
 ): Promise<string> {
-  const startTime = night.startsAt * 1000;
-  const event = await guild.scheduledEvents.create({
+  return createExternalScheduledEvent(guild, {
     name: eventName(night),
     description: `Organized by <@${night.creatorId}>. RSVP and vote in <#${night.channelId}>.`,
-    scheduledStartTime: startTime,
-    scheduledEndTime: startTime + durationMinutes * 60_000,
-    privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
-    entityType: GuildScheduledEventEntityType.External,
-    entityMetadata: { location: night.location.slice(0, 100) },
+    startsAt: night.startsAt,
+    durationMinutes,
+    location: night.location,
   });
-  return event.id;
 }
 
 export async function updateScheduledEventMovie(client: Client, night: MovieNight): Promise<void> {
-  if (!night.scheduledEventId) return;
-  const guild = await client.guilds.fetch(night.guildId);
-  await guild.scheduledEvents.edit(night.scheduledEventId, { name: eventName(night) });
+  await renameScheduledEvent(client, night, eventName(night));
 }
 
 export async function deleteScheduledEvent(client: Client, night: MovieNight): Promise<void> {
-  if (!night.scheduledEventId) return;
-  const guild = await client.guilds.fetch(night.guildId);
-  await guild.scheduledEvents.delete(night.scheduledEventId);
+  await deleteSharedScheduledEvent(client, night);
 }
