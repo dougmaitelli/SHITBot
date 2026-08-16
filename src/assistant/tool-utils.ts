@@ -14,7 +14,7 @@ export function requestedLimit(value: unknown): number {
 export function itemSummary(item: UpcomingItem, userId?: string) {
   const counts = attendance(item);
   return {
-    id: item.ref, type: item.kind, title: item.title, starts_at: item.startsAt,
+    id: item.ref, type: item.kind, title: item.title,
     discord_time: `<t:${item.startsAt}:F>`, channel: `<#${item.channelId}>`, organizer: `<@${item.creatorId}>`,
     details: item.details?.slice(0, 300) ?? null, going: counts.goingCount, maybe: counts.maybeCount,
     not_going: counts.notGoingCount, attendance_limit: counts.attendanceLimit,

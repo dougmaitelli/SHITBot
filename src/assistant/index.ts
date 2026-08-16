@@ -19,9 +19,12 @@ function promptFromMention(message: Message, botId: string): string {
 }
 
 export function boundedReply(value: string, maxCharacters: number): string {
-  if (value.length <= maxCharacters) return value;
+  const normalized = value.replace(/<t:(\d{13})(?::([tTdDfFR]))?>/g, (_match, milliseconds: string, style?: string) =>
+    `<t:${Math.floor(Number(milliseconds) / 1000)}${style ? `:${style}` : ""}>`,
+  );
+  if (normalized.length <= maxCharacters) return normalized;
   if (maxCharacters <= 3) return ".".repeat(maxCharacters);
-  return `${value.slice(0, maxCharacters - 3)}...`;
+  return `${normalized.slice(0, maxCharacters - 3)}...`;
 }
 
 export function startAssistant(client: Client, tools: AssistantTool[], config: AssistantConfig): void {

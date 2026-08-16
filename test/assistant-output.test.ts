@@ -12,4 +12,8 @@ describe("boundedReply", () => {
     assert.equal(result, "abcdefg...");
     assert.equal(result.length, 10);
   });
+
+  it("converts millisecond Discord timestamps to seconds", () => {
+    assert.equal(boundedReply("Starts <t:1760000000000:F>", 100), "Starts <t:1760000000:F>");
+  });
 });

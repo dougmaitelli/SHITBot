@@ -18,7 +18,6 @@ export function summarizeMovieNightSuggestions(store: BotStore, guildId: string,
   const highestVotes = suggestions.length ? Math.max(...suggestions.map((suggestion) => suggestion.votes)) : 0;
   return {
     id: ref,
-    starts_at: night.startsAt,
     discord_time: `<t:${night.startsAt}:F>`,
     voting_open: night.votingOpen,
     selected_movie: night.movie,

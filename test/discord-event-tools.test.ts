@@ -31,5 +31,7 @@ describe("Discord scheduled-event assistant tools", () => {
     assert.equal(result.events[0]?.id, "discord-event:123");
     assert.equal(result.events[0]?.title, "Community Town Hall");
     assert.equal(result.events[0]?.discord_interested, 42);
+    assert.equal(result.events[0]?.discord_time, `<t:${Math.floor(future / 1000)}:F>`);
+    assert.equal(result.events[0]?.starts_at, undefined);
   });
 });
