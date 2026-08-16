@@ -1,5 +1,7 @@
 import type { AssistantTool, AssistantToolContext } from "./types.js";
 
+const MAX_TOOL_RESULT_CHARACTERS = 16_000;
+
 interface ToolCall {
   id: string;
   type: "function";
@@ -61,7 +63,10 @@ export class OpenAICompatibleClient {
             }
           }
         }
-        messages.push({ role: "tool", tool_call_id: call.id, content: result });
+        const boundedResult = result.length <= MAX_TOOL_RESULT_CHARACTERS
+          ? result
+          : `${result.slice(0, MAX_TOOL_RESULT_CHARACTERS)}\n[Tool result truncated]`;
+        messages.push({ role: "tool", tool_call_id: call.id, content: boundedResult });
       }
       if (toolCallsUsed >= 3) {
         const final = await this.complete(messages, []);

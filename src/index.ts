@@ -5,6 +5,7 @@ import type { CommandContext, CommandModule } from "./commands/types.js";
 import { BotStore } from "./store.js";
 import { startAssistant } from "./assistant/index.js";
 import type { AssistantTool } from "./assistant/types.js";
+import { startReminderJob } from "./reminders/index.js";
 
 function requiredEnv(name: string): string {
   const value = process.env[name];
@@ -86,6 +87,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Ready as ${readyClient.user.tag}`);
   for (const command of commandModules) await command.onReady?.();
+  startReminderJob(client, store);
 });
 
 await store.load();

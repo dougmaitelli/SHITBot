@@ -7,6 +7,7 @@ import { startExpirationJob } from "./expiration-job.js";
 import { deleteScheduledEvent } from "./scheduled-event.js";
 import type { CommunityEvent } from "./types.js";
 import { createCommunityEvent } from "./create-event.js";
+import { registerEventAssistantTools } from "./assistant-tools.js";
 
 const actions = new Set(["eventRsvp", "eventDelete"]);
 const isClosed = (event: CommunityEvent) => Boolean(event.closedAt) || event.startsAt <= Math.floor(Date.now() / 1000);
@@ -39,6 +40,7 @@ function parseLink(value: string | undefined): string | undefined {
 }
 
 const createEventCommand: CommandFactory = ({ client, store, config, assistantTools }): CommandModule => {
+  registerEventAssistantTools(client, store, assistantTools, config.timeZone);
   async function updateMessage(event: CommunityEvent): Promise<void> {
     const channel = await client.channels.fetch(event.channelId);
     if (!channel?.isTextBased() || channel.isDMBased()) return;

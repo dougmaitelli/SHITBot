@@ -85,7 +85,13 @@ Both `/event create` and `/movie-night create` accept an optional `attendance-li
 
 Set `OPENAI_API_KEY` to enable the assistant, then mention the bot in a server channel and include a request. The client uses the OpenAI-compatible `/v1/chat/completions` API. `OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`, and `OPENAI_MODEL` defaults to `gpt-4o-mini`; override either for another compatible provider.
 
-The assistant can answer short questions and create events or movie nights. General events are posted in the current channel. Movie nights are posted in the configured movie-night channel. Creation uses the mentioning user as organizer and follows the same validation and persistence paths as the slash commands.
+The assistant can answer short questions, create events or movie nights, list and summarize upcoming items, list items the requesting user is attending, report attendance and remaining capacity, search TMDB for movie ideas, summarize movie suggestions and voting, and post or schedule reminder messages. General-event and movie-night listing, attendance, and reminder tools are separate. General event tools work in any channel. Every movie-related command and AI tool is restricted to the configured movie-night channel. Creation uses the mentioning user as organizer and follows the same validation and persistence paths as the slash commands.
+
+Users can mention the bot to ask what it can do in conversational mode. Its answer covers only the actions available through an `@` mention and does not advertise slash commands or unrelated bot features.
+
+Free-form chat is limited to trivia and ordinary general knowledge. Requests to create, inspect, edit, debug, or execute code, scripts, commands, files, documents, attachments, or other executable/downloadable artifacts are rejected before reaching the AI provider. Attempts to extract hidden instructions or secrets are also rejected and still count toward rate limits.
+
+Scheduled reminders persist across restarts and are posted within about 30 seconds of their requested time. Only an event's organizer can create its public reminders, and each organizer can have up to 10 pending reminders. Reminder text cannot trigger Discord mentions.
 
 Requests are single-turn and do not include channel history. Defaults limit prompts to 2,000 characters and responses to 500 tokens. Each user may make 5 requests and each server may make 30 requests per 5-minute window, with one request in flight per user. Configure these with `AI_MAX_INPUT_CHARACTERS`, `AI_MAX_OUTPUT_TOKENS`, `AI_USER_RATE_LIMIT`, `AI_GUILD_RATE_LIMIT`, `AI_RATE_LIMIT_WINDOW_MS`, and `AI_TIMEOUT_MS`.
 

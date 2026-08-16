@@ -2,15 +2,17 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { MovieNight } from "./commands/movie-night/types.js";
 import type { CommunityEvent } from "./commands/event/types.js";
+import type { EventReminder } from "./reminders/types.js";
 
 interface StoreData {
   nights: Record<string, MovieNight>;
   events: Record<string, CommunityEvent>;
+  reminders: Record<string, EventReminder>;
   greaseLastUsedAt?: number;
 }
 
 export class BotStore {
-  private data: StoreData = { nights: {}, events: {} };
+  private data: StoreData = { nights: {}, events: {}, reminders: {} };
   private saveQueue = Promise.resolve();
 
   constructor(private readonly filename: string) {}
@@ -18,7 +20,10 @@ export class BotStore {
   async load(): Promise<void> {
     try {
       const saved = JSON.parse(await readFile(this.filename, "utf8")) as Partial<StoreData>;
-      this.data = { nights: saved.nights ?? {}, events: saved.events ?? {}, greaseLastUsedAt: saved.greaseLastUsedAt };
+      this.data = {
+        nights: saved.nights ?? {}, events: saved.events ?? {}, reminders: saved.reminders ?? {},
+        greaseLastUsedAt: saved.greaseLastUsedAt,
+      };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       await this.save();
@@ -58,6 +63,20 @@ export class BotStore {
 
   deleteEvent(id: string): Promise<void> {
     delete this.data.events[id];
+    return this.save();
+  }
+
+  listReminders(): EventReminder[] {
+    return Object.values(this.data.reminders);
+  }
+
+  setReminder(reminder: EventReminder): Promise<void> {
+    this.data.reminders[reminder.id] = reminder;
+    return this.save();
+  }
+
+  deleteReminder(id: string): Promise<void> {
+    delete this.data.reminders[id];
     return this.save();
   }
 
