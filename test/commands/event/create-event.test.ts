@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { adoptCommunityEvent, parseScheduledEventReference } from "../src/commands/event/create-event.js";
-import { BotStore } from "../src/store.js";
+import { adoptCommunityEvent, parseScheduledEventReference } from "../../../src/commands/event/create-event.js";
+import { BotStore } from "../../../src/store.js";
 import type { GuildScheduledEvent } from "discord.js";
 
 describe("Discord event import", () => {

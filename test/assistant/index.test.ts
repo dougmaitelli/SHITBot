@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { boundedReply } from "../src/assistant/index.js";
+import { boundedReply } from "../../src/assistant/index.js";
 
 describe("boundedReply", () => {
   it("leaves responses within the limit unchanged", () => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderEvent } from "../src/commands/event/event-render.js";
-import type { CommunityEvent } from "../src/commands/event/types.js";
+import { renderEvent } from "../../../src/commands/event/event-render.js";
+import type { CommunityEvent } from "../../../src/commands/event/types.js";
 
 function communityEvent(): CommunityEvent {
   return {

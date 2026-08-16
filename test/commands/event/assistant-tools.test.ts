@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { GuildScheduledEventStatus, type Client, type Guild, type GuildScheduledEvent } from "discord.js";
-import { registerEventAssistantTools } from "../src/commands/event/assistant-tools.js";
-import { BotStore } from "../src/store.js";
-import type { AssistantTool } from "../src/assistant/types.js";
+import { registerEventAssistantTools } from "../../../src/commands/event/assistant-tools.js";
+import { BotStore } from "../../../src/store.js";
+import type { AssistantTool } from "../../../src/assistant/types.js";
 
 describe("Discord scheduled-event assistant tools", () => {
   it("lists scheduled events that were not created by the bot", async () => {

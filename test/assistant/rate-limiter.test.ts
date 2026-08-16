@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { FixedWindowRateLimiter } from "../src/assistant/rate-limiter.js";
+import { FixedWindowRateLimiter } from "../../src/assistant/rate-limiter.js";
 
 describe("FixedWindowRateLimiter", () => {
   it("blocks requests above the limit until the window resets", () => {

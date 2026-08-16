@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { BOT_CAPABILITIES } from "../src/assistant/capabilities.js";
-import { outputLengthInstruction, TOOL_USE_INSTRUCTIONS } from "../src/assistant/system-prompt.js";
+import { BOT_CAPABILITIES } from "../../src/assistant/capabilities.js";
+import { outputLengthInstruction, TOOL_USE_INSTRUCTIONS } from "../../src/assistant/system-prompt.js";
 
 describe("assistant capability catalog", () => {
   it("covers every mention-based workflow without advertising commands", () => {

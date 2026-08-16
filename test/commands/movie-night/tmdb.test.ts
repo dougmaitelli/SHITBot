@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { TmdbClient } from "../src/commands/movie-night/tmdb.js";
+import { TmdbClient } from "../../../src/commands/movie-night/tmdb.js";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

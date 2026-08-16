@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { OpenAICompatibleClient } from "../src/assistant/openai-client.js";
-import type { AssistantTool } from "../src/assistant/types.js";
+import { OpenAICompatibleClient } from "../../src/assistant/openai-client.js";
+import type { AssistantTool } from "../../src/assistant/types.js";
 import type { Guild } from "discord.js";
 
 const originalFetch = globalThis.fetch;

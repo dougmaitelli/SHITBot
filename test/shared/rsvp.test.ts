@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildRsvpFields, setRsvp, type Rsvps } from "../src/shared/rsvp.js";
+import { buildRsvpFields, setRsvp, type Rsvps } from "../../src/shared/rsvp.js";
 
 describe("RSVP attendance limits", () => {
   it("rejects a new Going RSVP when the limit has been reached", () => {

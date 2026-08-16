@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderNight } from "../src/commands/movie-night/night-render.js";
-import type { MovieNight } from "../src/commands/movie-night/types.js";
+import { renderNight } from "../../../src/commands/movie-night/night-render.js";
+import type { MovieNight } from "../../../src/commands/movie-night/types.js";
 
 function movieNight(): MovieNight {
   return {

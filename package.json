@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run lint && npm run format:check",
-    "test": "tsx --test test/**/*.test.ts"
+    "test": "tsx --test \"test/**/*.test.ts\""
   },
   "engines": {
     "node": ">=20"

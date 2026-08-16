@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { sendDueReminders } from "../src/reminders/index.js";
-import { BotStore } from "../src/store.js";
+import { sendDueReminders } from "../../src/reminders/index.js";
+import { BotStore } from "../../src/store.js";
 import type { Client } from "discord.js";
 
 describe("event reminders", () => {

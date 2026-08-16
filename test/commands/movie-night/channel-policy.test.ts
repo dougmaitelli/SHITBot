@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isMovieNightChannel } from "../src/commands/movie-night/channel-policy.js";
+import { isMovieNightChannel } from "../../../src/commands/movie-night/channel-policy.js";
 
 describe("movie-night channel policy", () => {
   it("allows only the configured channel name", () => {

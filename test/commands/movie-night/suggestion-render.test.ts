@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { renderSuggestion } from "../src/commands/movie-night/suggestion-render.js";
-import type { MovieNight, MovieSuggestion } from "../src/commands/movie-night/types.js";
+import { renderSuggestion } from "../../../src/commands/movie-night/suggestion-render.js";
+import type { MovieNight, MovieSuggestion } from "../../../src/commands/movie-night/types.js";
 
 function fixture(): { night: MovieNight; suggestion: MovieSuggestion } {
   const suggestion: MovieSuggestion = {

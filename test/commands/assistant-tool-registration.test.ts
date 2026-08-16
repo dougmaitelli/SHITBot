@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { registerEventAssistantTools } from "../src/commands/event/assistant-tools.js";
-import { registerMovieNightAssistantTools } from "../src/commands/movie-night/assistant-tools.js";
-import { BotStore } from "../src/store.js";
-import type { AssistantTool } from "../src/assistant/types.js";
+import { registerEventAssistantTools } from "../../src/commands/event/assistant-tools.js";
+import { registerMovieNightAssistantTools } from "../../src/commands/movie-night/assistant-tools.js";
+import { BotStore } from "../../src/store.js";
+import type { AssistantTool } from "../../src/assistant/types.js";
 import type { Client } from "discord.js";
 
 describe("domain assistant-tool registration", () => {

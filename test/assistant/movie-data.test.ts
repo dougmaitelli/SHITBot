@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { summarizeMovieNightSuggestions } from "../src/assistant/movie-data.js";
-import { BotStore } from "../src/store.js";
+import { summarizeMovieNightSuggestions } from "../../src/assistant/movie-data.js";
+import { BotStore } from "../../src/store.js";
 
 describe("movie-night suggestion summaries", () => {
   it("summarizes suggestions, leaders, and the requesting user's vote", async () => {

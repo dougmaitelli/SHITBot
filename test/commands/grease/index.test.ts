@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { GREASE_SUCCESS_CHANCE, greaseSucceeds } from "../src/commands/grease/index.js";
+import { GREASE_SUCCESS_CHANCE, greaseSucceeds } from "../../../src/commands/grease/index.js";
 
 describe("greaseSucceeds", () => {
   it("succeeds for rolls below five percent", () => {
