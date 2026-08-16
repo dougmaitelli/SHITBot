@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { BOT_CAPABILITIES } from "../src/assistant/capabilities.js";
-import { TOOL_USE_INSTRUCTIONS } from "../src/assistant/system-prompt.js";
+import { outputLengthInstruction, TOOL_USE_INSTRUCTIONS } from "../src/assistant/system-prompt.js";
 
 describe("assistant capability catalog", () => {
   it("covers every mention-based workflow without advertising commands", () => {
@@ -26,5 +26,12 @@ describe("assistant tool-use instructions", () => {
     assert.match(TOOL_USE_INSTRUCTIONS, /Do not use tools for general knowledge/i);
     assert.match(TOOL_USE_INSTRUCTIONS, /ambiguous requests.*read-only tools/i);
     assert.match(TOOL_USE_INSTRUCTIONS, /complete request/i);
+  });
+
+  it("instructs the model to finish within the configured output limit", () => {
+    const instruction = outputLengthInstruction(1600);
+    assert.match(instruction, /under 1600 characters/i);
+    assert.match(instruction, /complete answer/i);
+    assert.match(instruction, /do not end mid-sentence/i);
   });
 });
