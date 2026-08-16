@@ -52,10 +52,11 @@ const commandModules: CommandModule[] = commandFactories.map((createCommand) => 
 const commandsByName = new Map(commandModules.map((command) => [command.data.name, command]));
 
 const openAIApiKey = process.env.OPENAI_API_KEY;
-if (openAIApiKey) {
+const openAIBaseUrl = process.env.OPENAI_BASE_URL;
+if (openAIBaseUrl || openAIApiKey) {
   startAssistant(client, assistantTools, {
     apiKey: openAIApiKey,
-    baseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
+    baseUrl: openAIBaseUrl ?? "https://api.openai.com/v1",
     model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
     maxInputCharacters: positiveIntegerEnv("AI_MAX_INPUT_CHARACTERS", 2000),
     maxOutputTokens: positiveIntegerEnv("AI_MAX_OUTPUT_TOKENS", 500),
@@ -66,7 +67,7 @@ if (openAIApiKey) {
     timeZone: commandContext.config.timeZone,
   });
 } else {
-  console.log("AI assistant disabled: OPENAI_API_KEY is not configured");
+  console.log("AI assistant disabled: OPENAI_BASE_URL and OPENAI_API_KEY are not configured");
 }
 
 client.on(Events.InteractionCreate, async (interaction) => {

@@ -33,6 +33,20 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(request.body?.tools, undefined);
   });
 
+  it("supports providers that do not require an API key", async () => {
+    let authorization: string | null = "not called";
+    globalThis.fetch = async (_input, init) => {
+      authorization = new Headers(init?.headers).get("authorization");
+      return new Response(JSON.stringify({ choices: [{ message: { content: "Hello" } }] }));
+    };
+    const unauthenticated = new OpenAICompatibleClient({
+      baseUrl: "http://localhost:1234/v1", model: "local", maxOutputTokens: 200, timeoutMs: 1000,
+    });
+
+    assert.equal(await unauthenticated.respond("Hi", context, [], "System"), "Hello");
+    assert.equal(authorization, null);
+  });
+
   it("executes function calls and returns their result to the model", async () => {
     const requests: Array<Record<string, unknown>> = [];
     globalThis.fetch = async (_input, init) => {

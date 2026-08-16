@@ -21,7 +21,7 @@ interface CompletionResponse {
 }
 
 export interface OpenAICompatibleConfig {
-  apiKey: string;
+  apiKey?: string;
   baseUrl: string;
   model: string;
   maxOutputTokens: number;
@@ -76,9 +76,11 @@ export class OpenAICompatibleClient {
   }
 
   private async complete(messages: ChatMessage[], tools: AssistantTool[]): Promise<CompletionResponse> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.config.apiKey) headers.Authorization = `Bearer ${this.config.apiKey}`;
     const response = await fetch(`${this.config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${this.config.apiKey}`, "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model: this.config.model,
         messages,

@@ -83,7 +83,7 @@ Both `/event create` and `/movie-night create` accept an optional `attendance-li
 
 ## AI assistant
 
-Set `OPENAI_API_KEY` to enable the assistant, then mention the bot in a server channel and include a request. The client uses the OpenAI-compatible `/v1/chat/completions` API. `OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`, and `OPENAI_MODEL` defaults to `gpt-4o-mini`; override either for another compatible provider.
+Set `OPENAI_BASE_URL` or `OPENAI_API_KEY` to enable the assistant, then mention the bot in a server channel and include a request. `OPENAI_API_KEY` is optional: when it is empty, the client sends no `Authorization` header, supporting local or other unauthenticated OpenAI-compatible endpoints. If only a key is provided, `OPENAI_BASE_URL` defaults to `https://api.openai.com/v1`. If neither is configured, mention handling is not registered and all non-AI bot features continue normally. `OPENAI_MODEL` defaults to `gpt-4o-mini`.
 
 The assistant can answer short questions, create events or movie nights, list and summarize upcoming items, list items the requesting user is attending, report attendance and remaining capacity, search TMDB for movie ideas, summarize movie suggestions and voting, and post or schedule reminder messages. General-event and movie-night listing, attendance, and reminder tools are separate. General event tools work in any channel. Every movie-related command and AI tool is restricted to the configured movie-night channel. Creation uses the mentioning user as organizer and follows the same validation and persistence paths as the slash commands.
 
