@@ -16,16 +16,7 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
       .setDescription("Send grease to every other text channel")
       .toJSON(),
 
-    async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-      if (!interaction.inCachedGuild()) {
-        await interaction.reply({
-          content: "The grease command can only be used in a server.",
-          flags: MessageFlags.Ephemeral,
-        });
-
-        return;
-      }
-
+    async execute(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
       const now = Date.now();
       const lastUsedAt = store.getGreaseLastUsedAt();
 

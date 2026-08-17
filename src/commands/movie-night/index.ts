@@ -147,16 +147,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
     await Promise.allSettled(night.suggestions.map((suggestion) => deleteSuggestionCard(night, suggestion)));
   }
 
-  async function createNight(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (!interaction.inCachedGuild() || !interaction.channelId) {
-      await interaction.reply({
-        content: "Movie nights can only be created in a server channel.",
-        flags: MessageFlags.Ephemeral,
-      });
-
-      return;
-    }
-
+  async function createNight(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
     if (!isMovieNightChannel(interaction.channel?.name, channelName)) {
       const configuredChannel = interaction.guild.channels.cache.find((channel) => channel.name === channelName);
 
@@ -742,7 +733,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
       )
       .toJSON(),
 
-    async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+    async execute(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
       if (interaction.options.getSubcommand() === "create") await createNight(interaction);
     },
     handleInteraction,

@@ -20,7 +20,7 @@ export interface CommandContext {
 
 export interface CommandModule {
   data: RESTPostAPIChatInputApplicationCommandsJSONBody;
-  execute(interaction: ChatInputCommandInteraction): Promise<void>;
+  execute(interaction: ChatInputCommandInteraction<"cached">): Promise<void>;
   handleInteraction?(interaction: Interaction): Promise<boolean>;
   onReady?(): Promise<void> | void;
 }

@@ -1,5 +1,14 @@
 import "dotenv/config";
-import { Client, Events, GatewayIntentBits, MessageFlags, REST, Routes, type Interaction } from "discord.js";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  InteractionContextType,
+  MessageFlags,
+  REST,
+  Routes,
+  type Interaction,
+} from "discord.js";
 import { startAssistant } from "./assistant/index.js";
 import { loadCommandFactories } from "./commands/load.js";
 import { startDiscordHealthMonitor, startHealthServer } from "./discord-health.js";
@@ -152,7 +161,12 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
       const command = commandsByName.get(interaction.commandName);
 
       if (!command) logger.warn("No handler registered for command", interactionContext);
-      else await command.execute(interaction);
+      else if (!interaction.inCachedGuild() || !interaction.channelId) {
+        await interaction.reply({
+          content: "Commands can only be used in a server channel.",
+          flags: MessageFlags.Ephemeral,
+        });
+      } else await command.execute(interaction);
 
       logger.info("Interaction completed", {
         ...interactionContext,
@@ -212,7 +226,10 @@ client.once(Events.ClientReady, (readyClient) => {
 await store.load();
 logger.info("Data store loaded", { dataFile: process.env.DATA_FILE ?? "./data/movie-nights.json" });
 const rest = new REST().setToken(token);
-const commandData = commandModules.map((command) => command.data);
+const commandData = commandModules.map((command) => ({
+  ...command.data,
+  contexts: [InteractionContextType.Guild],
+}));
 
 if (guildId) {
   await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commandData });

@@ -38,16 +38,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     await message.edit(renderEvent(event));
   }
 
-  async function create(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (!interaction.inCachedGuild() || !interaction.channelId) {
-      await interaction.reply({
-        content: "Events can only be created in a server channel.",
-        flags: MessageFlags.Ephemeral,
-      });
-
-      return;
-    }
-
+  async function create(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
     const name = interaction.options.getString("name", true).trim();
 
     if (!name) {
@@ -133,16 +124,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     }
   }
 
-  async function importEvent(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (!interaction.inCachedGuild() || !interaction.channelId) {
-      await interaction.reply({
-        content: "Events can only be imported in a server channel.",
-        flags: MessageFlags.Ephemeral,
-      });
-
-      return;
-    }
-
+  async function importEvent(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
     let scheduledEventId: string;
 
     try {
