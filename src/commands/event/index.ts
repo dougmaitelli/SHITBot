@@ -1,7 +1,6 @@
 import {
   MessageFlags,
   PermissionFlagsBits,
-  SlashCommandBuilder,
   GuildScheduledEventStatus,
   type ButtonInteraction,
   type Interaction,
@@ -9,6 +8,7 @@ import {
 import { logger } from "../../logger.js";
 import { setRsvp, type RsvpStatus } from "../../shared/rsvp.js";
 import { parseDate } from "../../utils/date-parser.js";
+import { buildCommand } from "../command-schema.js";
 import { registerEventAssistantTools } from "./assistant-tools.js";
 import {
   adoptCommunityEvent,
@@ -280,62 +280,62 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
   }
 
   return {
-    data: new SlashCommandBuilder()
-      .setName("event")
-      .setDescription("Organize an event")
-      .addSubcommand((command) =>
-        command
-          .setName("create")
-          .setDescription("Create a new event")
-          .addStringOption((option) =>
-            option.setName("name").setDescription("Event name").setMaxLength(100).setRequired(true),
-          )
-          .addStringOption((option) =>
-            option
-              .setName("when")
-              .setDescription("Date and time, e.g. 2026-08-15 7:30 PM")
-              .setMaxLength(100)
-              .setRequired(true),
-          )
-          .addStringOption((option) =>
-            option.setName("description").setDescription("Optional event details").setMaxLength(1000),
-          )
-          .addStringOption((option) => option.setName("link").setDescription("Optional event URL").setMaxLength(512))
-          .addIntegerOption((option) =>
-            option
-              .setName("duration")
-              .setDescription("Duration in minutes (default: 180)")
-              .setMinValue(15)
-              .setMaxValue(10080),
-          )
-          .addIntegerOption((option) =>
-            option
-              .setName("attendance-limit")
-              .setDescription("Maximum number of people who can RSVP Going")
-              .setMinValue(1)
-              .setMaxValue(100000),
-          ),
-      )
-      .addSubcommand((command) =>
-        command
-          .setName("import")
-          .setDescription("Convert an existing Discord event into a bot-managed event")
-          .addStringOption((option) =>
-            option
-              .setName("discord-event")
-              .setDescription("Discord event ID or copied event link")
-              .setMaxLength(300)
-              .setRequired(true),
-          )
-          .addIntegerOption((option) =>
-            option
-              .setName("attendance-limit")
-              .setDescription("Maximum number of people who can RSVP Going")
-              .setMinValue(1)
-              .setMaxValue(100000),
-          ),
-      )
-      .toJSON(),
+    data: buildCommand({
+      name: "event",
+      description: "Organize an event",
+      subcommands: [
+        {
+          name: "create",
+          description: "Create a new event",
+          options: [
+            { type: "string", name: "name", description: "Event name", maxLength: 100, required: true },
+            {
+              type: "string",
+              name: "when",
+              description: "Date and time, e.g. 2026-08-15 7:30 PM",
+              maxLength: 100,
+              required: true,
+            },
+            { type: "string", name: "description", description: "Optional event details", maxLength: 1000 },
+            { type: "string", name: "link", description: "Optional event URL", maxLength: 512 },
+            {
+              type: "integer",
+              name: "duration",
+              description: "Duration in minutes (default: 180)",
+              minValue: 15,
+              maxValue: 10080,
+            },
+            {
+              type: "integer",
+              name: "attendance-limit",
+              description: "Maximum number of people who can RSVP Going",
+              minValue: 1,
+              maxValue: 100000,
+            },
+          ],
+        },
+        {
+          name: "import",
+          description: "Convert an existing Discord event into a bot-managed event",
+          options: [
+            {
+              type: "string",
+              name: "discord-event",
+              description: "Discord event ID or copied event link",
+              maxLength: 300,
+              required: true,
+            },
+            {
+              type: "integer",
+              name: "attendance-limit",
+              description: "Maximum number of people who can RSVP Going",
+              minValue: 1,
+              maxValue: 100000,
+            },
+          ],
+        },
+      ],
+    }),
     async execute(interaction) {
       const subcommand = interaction.options.getSubcommand();
 

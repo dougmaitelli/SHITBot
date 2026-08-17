@@ -1,4 +1,5 @@
-import { MessageFlags, SlashCommandBuilder } from "discord.js";
+import { MessageFlags } from "discord.js";
+import { buildCommand } from "../command-schema.js";
 import type { CommandFactory, CommandModule, GuildCommandInteraction } from "../types.js";
 
 const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
@@ -11,10 +12,10 @@ export function greaseSucceeds(random: () => number = Math.random): boolean {
 
 const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
   return {
-    data: new SlashCommandBuilder()
-      .setName("grease")
-      .setDescription("Send grease to every other text channel")
-      .toJSON(),
+    data: buildCommand({
+      name: "grease",
+      description: "Send grease to every other text channel",
+    }),
 
     async execute(interaction: GuildCommandInteraction): Promise<void> {
       const now = Date.now();

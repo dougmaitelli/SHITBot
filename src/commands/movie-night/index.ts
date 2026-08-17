@@ -3,7 +3,6 @@ import {
   ActionRowBuilder,
   MessageFlags,
   ModalBuilder,
-  SlashCommandBuilder,
   StringSelectMenuBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -15,6 +14,7 @@ import {
 import { logger } from "../../logger.js";
 import { setRsvp } from "../../shared/rsvp.js";
 import { parseDate } from "../../utils/date-parser.js";
+import { buildCommand } from "../command-schema.js";
 import { registerMovieNightAssistantTools } from "./assistant-tools.js";
 import { isMovieNightChannel } from "./channel-policy.js";
 import { createMovieNight } from "./create-night.js";
@@ -688,49 +688,52 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
   }
 
   return {
-    data: new SlashCommandBuilder()
-      .setName("movie-night")
-      .setDescription("Organize a movie night")
-      .addSubcommand((command) =>
-        command
-          .setName("create")
-          .setDescription("Create a new movie night")
-          .addStringOption((option) =>
-            option
-              .setName("when")
-              .setDescription("Date and time, e.g. 2026-08-15 7:30 PM or 08/15/2026 19:30")
-              .setMaxLength(100)
-              .setRequired(true),
-          )
-          .addStringOption((option) =>
-            option
-              .setName("location")
-              .setDescription("Where the movie night is happening")
-              .setMaxLength(200)
-              .setRequired(true),
-          )
-          .addStringOption((option) =>
-            option
-              .setName("movie")
-              .setDescription("Movie title; omit it to let people suggest and vote")
-              .setMaxLength(100),
-          )
-          .addIntegerOption((option) =>
-            option
-              .setName("duration")
-              .setDescription("Duration in minutes (default: 180)")
-              .setMinValue(30)
-              .setMaxValue(720),
-          )
-          .addIntegerOption((option) =>
-            option
-              .setName("attendance-limit")
-              .setDescription("Maximum number of people who can RSVP Going")
-              .setMinValue(1)
-              .setMaxValue(100000),
-          ),
-      )
-      .toJSON(),
+    data: buildCommand({
+      name: "movie-night",
+      description: "Organize a movie night",
+      subcommands: [
+        {
+          name: "create",
+          description: "Create a new movie night",
+          options: [
+            {
+              type: "string",
+              name: "when",
+              description: "Date and time, e.g. 2026-08-15 7:30 PM or 08/15/2026 19:30",
+              maxLength: 100,
+              required: true,
+            },
+            {
+              type: "string",
+              name: "location",
+              description: "Where the movie night is happening",
+              maxLength: 200,
+              required: true,
+            },
+            {
+              type: "string",
+              name: "movie",
+              description: "Movie title; omit it to let people suggest and vote",
+              maxLength: 100,
+            },
+            {
+              type: "integer",
+              name: "duration",
+              description: "Duration in minutes (default: 180)",
+              minValue: 30,
+              maxValue: 720,
+            },
+            {
+              type: "integer",
+              name: "attendance-limit",
+              description: "Maximum number of people who can RSVP Going",
+              minValue: 1,
+              maxValue: 100000,
+            },
+          ],
+        },
+      ],
+    }),
 
     async execute(interaction: GuildCommandInteraction): Promise<void> {
       if (interaction.options.getSubcommand() === "create") await createNight(interaction);
