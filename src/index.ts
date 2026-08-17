@@ -102,6 +102,10 @@ const commandContext: CommandContext = {
     timeZone: process.env.TZ ?? "America/Los_Angeles",
     movieNightsChannel: process.env.MOVIE_NIGHTS_CHANNEL ?? "movie-nights",
     tmdbApiToken: requiredEnv("TMDB_API_TOKEN"),
+    roles: {
+      moderatorRoleId: process.env.MODERATOR_ROLE_ID ?? "",
+      adminRoleId: process.env.ADMIN_ROLE_ID ?? "",
+    },
   },
 };
 const commandModules: CommandModule[] = commandFactories.map((createCommand) => createCommand(commandContext));

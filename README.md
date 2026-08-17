@@ -63,7 +63,7 @@ Fill in `.env` with the bot token, application ID, and server ID, then run:
 npm run dev
 ```
 
-Movie-night creation is restricted to `#movie-nights` by default. Set `MOVIE_NIGHTS_CHANNEL` in `.env` if your channel has a different name.
+Movie-night creation is restricted to `#movie-nights` by default. Set `MOVIE_NIGHTS_CHANNEL` in `.env` if your channel has a different name. Set `MODERATOR_ROLE_ID` and `ADMIN_ROLE_ID` to the corresponding Discord role IDs; both roles can perform organizer-restricted moderation actions, with admin treated as higher than moderator.
 
 Use `/movie-night create`. The `when` field accepts common date/time formats, including:
 
@@ -75,7 +75,7 @@ Use `/movie-night create`. The `when` field accepts common date/time formats, in
 
 Times without an explicit offset use the `TZ` setting from `.env`. Inputs with a numeric UTC offset override that setting.
 
-If `movie` is omitted, suggestion and voting controls appear automatically. The organizer can close voting with **Define movie**.
+If `movie` is omitted, suggestion and voting controls appear automatically. The organizer, a moderator, or an admin can close voting with **Define movie**.
 
 Use `/event create` in any server channel for a non-movie event. `name` and `when` are required; `description`, `link`, `duration`, and `attendance-limit` are optional. Like movie nights, the bot creates a Discord scheduled event, provides RSVP buttons, and disables RSVPs once the start time passes.
 
@@ -95,7 +95,7 @@ Free-form chat is limited to ordinary general knowledge. Requests to create, ins
 
 The assistant is instructed to call tools only when a request needs current Discord data or an available action. General knowledge and ordinary conversation should be answered directly. It is also told to produce a complete response within `AI_MAX_OUTPUT_CHARACTERS`; the token limit and final character truncation remain safety backstops. Hard restrictions remain enforced in code: unavailable tools are never advertised, movie tools remain limited to the configured movie-night channel, and only registered tool calls can execute.
 
-Scheduled reminders persist across restarts and are posted within about 30 seconds of their requested time. Only an event's organizer can create its public reminders, and each organizer can have up to 10 pending reminders. Reminder text cannot trigger Discord mentions.
+Scheduled reminders persist across restarts and are posted within about 30 seconds of their requested time. Only an event's organizer, a moderator, or an admin can create its public reminders, and each requester can have up to 10 pending reminders. Reminder text cannot trigger Discord mentions.
 
 Requests are single-turn and do not include channel history. Defaults limit prompts to 500 characters and responses to both 400 provider tokens and 1,600 displayed characters. Responses exceeding the character cap are truncated before being posted to Discord. Each user may make 5 requests and each server may make 30 requests per 5-minute window, with one request in flight per user. Configure these with `AI_MAX_INPUT_CHARACTERS`, `AI_MAX_OUTPUT_CHARACTERS`, `AI_MAX_OUTPUT_TOKENS`, `AI_USER_RATE_LIMIT`, `AI_GUILD_RATE_LIMIT`, `AI_RATE_LIMIT_WINDOW_MS`, and `AI_TIMEOUT_MS`.
 

@@ -6,6 +6,7 @@ import { parseDate } from "../../utils/date-parser.js";
 import { createMovieNight } from "./create-night.js";
 import type { TmdbClient } from "./tmdb.js";
 import type { AssistantTool, AssistantToolContext } from "../../assistant/types.js";
+import type { RoleConfig } from "../../authorization.js";
 import type { BotStore } from "../../store.js";
 import type { Client } from "discord.js";
 
@@ -53,6 +54,7 @@ export function registerMovieNightAssistantTools(
   requireMovieChannel: (channelId: string) => Promise<unknown>,
   channelName = "movie-nights",
   tmdb?: TmdbClient,
+  roles: RoleConfig = { moderatorRoleId: "", adminRoleId: "" },
 ): void {
   const nights = (guildId: string) => upcomingItems(store, guildId).filter((item) => item.kind === "movie-night");
   const availableInMovieChannel = async (context: AssistantToolContext) => {
@@ -307,7 +309,7 @@ export function registerMovieNightAssistantTools(
     name: "create_movie_night_reminder",
     isAvailable: availableInMovieChannel,
     description:
-      "Post or schedule an organizer-only reminder for an upcoming movie night. Available only in the movie-night channel. Omit when to post now.",
+      "Post or schedule an organizer-or-moderator reminder for an upcoming movie night. Available only in the movie-night channel. Omit when to post now.",
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -331,7 +333,7 @@ export function registerMovieNightAssistantTools(
 
       if (!item || item.kind !== "movie-night") throw new Error("That upcoming movie night could not be found.");
 
-      return createReminder(client, store, context, item, parseReminderArguments(input), timeZone);
+      return createReminder(client, store, context, item, parseReminderArguments(input), timeZone, roles);
     },
   });
 }

@@ -11,6 +11,7 @@ import {
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
 } from "discord.js";
+import { isOrganizerOrModerator } from "../../authorization.js";
 import { logger } from "../../logger.js";
 import { setRsvp } from "../../shared/rsvp.js";
 import { parseDate } from "../../utils/date-parser.js";
@@ -81,6 +82,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
     getAssistantMovieChannel,
     channelName,
     tmdb,
+    config.roles,
   );
 
   async function updateMessage(night: MovieNight): Promise<void> {
@@ -536,9 +538,9 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
   }
 
   async function showFinalizeMenu(interaction: ButtonInteraction, night: MovieNight): Promise<void> {
-    if (interaction.user.id !== night.creatorId) {
+    if (!(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles))) {
       await interaction.reply({
-        content: "Only the movie night's organizer can choose the movie.",
+        content: "Only the movie night's organizer or a moderator can choose the movie.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -553,7 +555,10 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
   }
 
   async function pickMovie(interaction: StringSelectMenuInteraction, night: MovieNight): Promise<void> {
-    if (interaction.user.id !== night.creatorId || !night.votingOpen) {
+    if (
+      !(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles)) ||
+      !night.votingOpen
+    ) {
       await interaction.update({ content: "You can't finalize this movie night.", components: [] });
 
       return;
@@ -584,9 +589,9 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
   }
 
   async function deleteNight(interaction: ButtonInteraction, night: MovieNight): Promise<void> {
-    if (interaction.user.id !== night.creatorId) {
+    if (!(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles))) {
       await interaction.reply({
-        content: "Only the movie night's organizer can delete it.",
+        content: "Only the movie night's organizer or a moderator can delete it.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -621,9 +626,12 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
       return;
     }
 
-    if (interaction.user.id !== suggestion.suggestedBy && interaction.user.id !== night.creatorId) {
+    if (
+      interaction.user.id !== suggestion.suggestedBy &&
+      !(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles))
+    ) {
       await interaction.reply({
-        content: "Only the person who suggested this movie or the movie night's organizer can delete it.",
+        content: "Only the suggester, movie-night organizer, or a moderator can delete it.",
         flags: MessageFlags.Ephemeral,
       });
 

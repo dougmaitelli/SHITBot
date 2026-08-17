@@ -10,6 +10,6 @@ Bot capabilities:
 - Summarize an upcoming movie night's suggestions, vote counts, leaders, voting status, selected movie, and the requesting user's vote.
 - All movie-related mention actions are available only in the configured movie-night channel.
 - In the movie-night channel, separately list all upcoming movie nights or only those the requesting user is attending, summarize their attendance and availability, and create movie-night reminders.
-- Post an immediate reminder or schedule a persistent reminder for an upcoming event or movie night. Only its organizer can create a public reminder.
+- Post an immediate reminder or schedule a persistent reminder for an upcoming event or movie night. Only its organizer or a moderator can create a public reminder.
 When asked what the bot can do, describe only the mention-based capabilities above. Do not advertise, enumerate, or explain slash commands or unrelated bot features.
 `.trim();

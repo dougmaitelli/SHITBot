@@ -6,6 +6,7 @@ import { parseDate } from "../../utils/date-parser.js";
 import { isMovieNightChannel } from "../movie-night/channel-policy.js";
 import { createCommunityEvent, parseEventLink } from "./create-event.js";
 import type { AssistantTool, AssistantToolContext } from "../../assistant/types.js";
+import type { RoleConfig } from "../../authorization.js";
 import type { BotStore } from "../../store.js";
 
 interface DiscordItem {
@@ -109,6 +110,7 @@ export function registerEventAssistantTools(
   tools: AssistantTool[],
   timeZone: string,
   movieNightsChannel: string,
+  roles: RoleConfig = { moderatorRoleId: "", adminRoleId: "" },
 ): void {
   async function visible(context: AssistantToolContext): Promise<DiscordItem[]> {
     const channel = await client.channels.fetch(context.channelId);
@@ -280,7 +282,7 @@ export function registerEventAssistantTools(
   tools.push({
     name: "create_event_reminder",
     description:
-      "Post or schedule an organizer-only reminder for an upcoming Discord Scheduled Event. Omit when to post now.",
+      "Post or schedule an organizer-or-moderator reminder for an upcoming Discord Scheduled Event. Omit when to post now.",
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -303,7 +305,7 @@ export function registerEventAssistantTools(
 
       if (!found) throw new Error("That upcoming Discord event could not be found.");
 
-      return createReminder(client, store, context, found.item, parseReminderArguments(input), timeZone);
+      return createReminder(client, store, context, found.item, parseReminderArguments(input), timeZone, roles);
     },
   });
 }

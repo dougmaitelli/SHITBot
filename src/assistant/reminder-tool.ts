@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isOrganizerOrModerator, type RoleConfig } from "../authorization.js";
 import { sendReminder } from "../reminders/index.js";
 import { parseDate } from "../utils/date-parser.js";
 import type { EventReminder } from "../reminders/types.js";
@@ -27,8 +28,11 @@ export async function createReminder(
   item: UpcomingItem,
   input: ReminderArguments,
   timeZone: string,
+  roles: RoleConfig,
 ): Promise<string> {
-  if (item.creatorId !== context.userId) throw new Error("Only the organizer can create a public reminder.");
+  if (!(await isOrganizerOrModerator(context.guild, context.userId, item.creatorId, roles))) {
+    throw new Error("Only the organizer or a moderator can create a public reminder.");
+  }
 
   const note = input.message?.trim() || undefined;
 

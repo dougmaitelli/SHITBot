@@ -5,6 +5,7 @@ import {
   type ButtonInteraction,
   type Interaction,
 } from "discord.js";
+import { isOrganizerOrModerator } from "../../authorization.js";
 import { logger } from "../../logger.js";
 import { setRsvp, type RsvpStatus } from "../../shared/rsvp.js";
 import { parseDate } from "../../utils/date-parser.js";
@@ -26,7 +27,7 @@ const actions = new Set(["eventRsvp", "eventDelete"]);
 const isClosed = (event: CommunityEvent) => Boolean(event.closedAt) || event.startsAt <= Math.floor(Date.now() / 1000);
 
 const createEventCommand: CommandFactory = ({ client, store, config, assistantTools }): CommandModule => {
-  registerEventAssistantTools(client, store, assistantTools, config.timeZone, config.movieNightsChannel);
+  registerEventAssistantTools(client, store, assistantTools, config.timeZone, config.movieNightsChannel, config.roles);
   async function updateMessage(event: CommunityEvent): Promise<void> {
     const channel = await client.channels.fetch(event.channelId);
 
@@ -217,9 +218,9 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
   }
 
   async function remove(interaction: ButtonInteraction, event: CommunityEvent): Promise<void> {
-    if (interaction.user.id !== event.creatorId) {
+    if (!(await isOrganizerOrModerator(interaction.guild, interaction.user.id, event.creatorId, config.roles))) {
       await interaction.reply({
-        content: "Only the event organizer can delete it.",
+        content: "Only the event organizer or a moderator can delete it.",
         flags: MessageFlags.Ephemeral,
       });
 

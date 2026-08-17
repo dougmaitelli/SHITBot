@@ -1,4 +1,5 @@
 import type { AssistantTool } from "../assistant/types.js";
+import type { RoleConfig } from "../authorization.js";
 import type { BotStore } from "../store.js";
 import type {
   ChatInputCommandInteraction,
@@ -21,6 +22,7 @@ export interface CommandContext {
     timeZone: string;
     movieNightsChannel: string;
     tmdbApiToken: string;
+    roles: RoleConfig;
   };
 }
 
