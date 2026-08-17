@@ -540,7 +540,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
   async function showFinalizeMenu(interaction: ButtonInteraction, night: MovieNight): Promise<void> {
     if (!(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles))) {
       await interaction.reply({
-        content: "Only the movie night's organizer or a moderator can choose the movie.",
+        content: "Only the movie night's organizer can choose the movie.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -591,7 +591,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
   async function deleteNight(interaction: ButtonInteraction, night: MovieNight): Promise<void> {
     if (!(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles))) {
       await interaction.reply({
-        content: "Only the movie night's organizer or a moderator can delete it.",
+        content: "Only the movie night's organizer can delete it.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -631,7 +631,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
       !(await isOrganizerOrModerator(interaction.guild, interaction.user.id, night.creatorId, config.roles))
     ) {
       await interaction.reply({
-        content: "Only the suggester, movie-night organizer, or a moderator can delete it.",
+        content: "Only the person who suggested this movie or the movie night's organizer can delete it.",
         flags: MessageFlags.Ephemeral,
       });
 

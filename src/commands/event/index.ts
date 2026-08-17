@@ -220,7 +220,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
   async function remove(interaction: ButtonInteraction, event: CommunityEvent): Promise<void> {
     if (!(await isOrganizerOrModerator(interaction.guild, interaction.user.id, event.creatorId, config.roles))) {
       await interaction.reply({
-        content: "Only the event organizer or a moderator can delete it.",
+        content: "Only the event organizer can delete it.",
         flags: MessageFlags.Ephemeral,
       });
 

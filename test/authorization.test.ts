@@ -10,6 +10,10 @@ describe("role authorization", () => {
     assert.equal(hasModeratorRole(["member", "admin"], roles), true);
   });
 
+  it("allows Discord administrators without a configured role match", () => {
+    assert.equal(hasModeratorRole(["member"], roles, true), true);
+  });
+
   it("rejects unmapped roles", () => {
     assert.equal(hasModeratorRole(["member"], roles), false);
   });

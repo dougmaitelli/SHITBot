@@ -31,7 +31,7 @@ export async function createReminder(
   roles: RoleConfig,
 ): Promise<string> {
   if (!(await isOrganizerOrModerator(context.guild, context.userId, item.creatorId, roles))) {
-    throw new Error("Only the organizer or a moderator can create a public reminder.");
+    throw new Error("Only the organizer can create a public reminder.");
   }
 
   const note = input.message?.trim() || undefined;
