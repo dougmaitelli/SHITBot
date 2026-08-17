@@ -28,6 +28,11 @@ describe("assistant tool-use instructions", () => {
     assert.match(TOOL_USE_INSTRUCTIONS, /complete request/i);
   });
 
+  it("requires exact provided tool names", () => {
+    assert.match(TOOL_USE_INSTRUCTIONS, /function name exactly as provided/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /never invent, pluralize, rename, or reformat/i);
+  });
+
   it("instructs the model to finish within the configured output limit", () => {
     const instruction = outputLengthInstruction(1600);
     assert.match(instruction, /under 1600 characters/i);

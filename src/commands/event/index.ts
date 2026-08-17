@@ -73,7 +73,9 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     }
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
-      await createCommunityEvent(
+      const channel = interaction.channel;
+      if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("Event channel is not sendable");
+      const event = await createCommunityEvent(
         client,
         store,
         {
@@ -87,7 +89,10 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
           attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
           durationMinutes: interaction.options.getInteger("duration") ?? 180,
         },
-        (options) => interaction.editReply(options),
+        (options) => channel.send(options),
+      );
+      await interaction.editReply(
+        `Created **${event.name}**. [View the event](https://discord.com/channels/${event.guildId}/${event.channelId}/${event.messageId}).`,
       );
     } catch (error) {
       logger.error("Could not create event", {
@@ -211,7 +216,9 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       logger.error("Could not delete scheduled event", { error, scheduledEventId: event.scheduledEventId }),
     );
     await store.deleteEvent(event.id);
-    await interaction.message.delete();
+    await interaction.message.delete().catch((error: unknown) => {
+      if (!(typeof error === "object" && error !== null && "code" in error && error.code === 10008)) throw error;
+    });
   }
 
   async function handleInteraction(interaction: Interaction): Promise<boolean> {
