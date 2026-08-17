@@ -103,6 +103,52 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(finalMessages.at(-1)?.content, "Created Party");
   });
 
+  it("stops advertising tools after three tool calls", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      requests.push(body);
+      const callNumber = requests.length;
+      return new Response(
+        JSON.stringify(
+          callNumber <= 3
+            ? {
+                choices: [
+                  {
+                    message: {
+                      content: null,
+                      tool_calls: [
+                        {
+                          id: `call-${callNumber}`,
+                          type: "function",
+                          function: { name: "lookup", arguments: "{}" },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }
+            : { choices: [{ message: { content: "Reached the limit" } }] },
+        ),
+      );
+    };
+    let executions = 0;
+    const tool: AssistantTool = {
+      name: "lookup",
+      description: "Look up data",
+      parameters: { type: "object" },
+      async execute() {
+        executions += 1;
+        return "Result";
+      },
+    };
+
+    assert.equal(await client().respond("Look things up", context, [tool], "System"), "Reached the limit");
+    assert.equal(executions, 3);
+    assert.equal(requests.length, 4);
+    assert.equal(requests[3]?.tools, undefined);
+  });
+
   it("retries instead of exposing tool protocol emitted as text", async () => {
     const requests: Array<Record<string, unknown>> = [];
     globalThis.fetch = async (_input, init) => {

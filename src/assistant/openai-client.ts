@@ -2,6 +2,7 @@ import { logger } from "../logger.js";
 import type { AssistantTool, AssistantToolContext } from "./types.js";
 
 const MAX_TOOL_RESULT_CHARACTERS = 16_000;
+const MAX_TOOL_CALLS = 3;
 const toolProtocolPattern =
   /(?:"(?:arguments|tool_calls?|function)"\s*:|<\/?(?:tool_call|function_call)>|\[(?:TOOL|FUNCTION)_CALLS?\])/i;
 
@@ -51,7 +52,7 @@ export class OpenAICompatibleClient {
 
     let toolCallsUsed = 0;
 
-    for (;;) {
+    while (toolCallsUsed < MAX_TOOL_CALLS) {
       const response = await this.complete(messages, availableTools);
       const message = response.choices?.[0]?.message;
       if (!message) throw new Error(response.error?.message ?? "The AI provider returned no response.");
@@ -64,7 +65,7 @@ export class OpenAICompatibleClient {
       for (const call of calls) {
         toolCallsUsed += 1;
         let result: string;
-        if (toolCallsUsed > 3) {
+        if (toolCallsUsed > MAX_TOOL_CALLS) {
           result = "Tool limit reached. Do not call more tools; explain this to the user.";
         } else {
           const tool = availableTools.find((candidate) => candidate.name === call.function.name);
@@ -85,11 +86,10 @@ export class OpenAICompatibleClient {
             : `${result.slice(0, MAX_TOOL_RESULT_CHARACTERS)}\n[Tool result truncated]`;
         messages.push({ role: "tool", tool_call_id: call.id, content: boundedResult });
       }
-      if (toolCallsUsed >= 3) {
-        const final = await this.complete(messages, []);
-        return this.validatedContent(final.choices?.[0]?.message?.content, messages);
-      }
     }
+
+    const final = await this.complete(messages, []);
+    return this.validatedContent(final.choices?.[0]?.message?.content, messages);
   }
 
   private async validatedContent(content: string | null | undefined, messages: ChatMessage[]): Promise<string> {
