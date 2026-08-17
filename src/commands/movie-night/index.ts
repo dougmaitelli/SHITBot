@@ -8,7 +8,6 @@ import {
   TextInputBuilder,
   TextInputStyle,
   type ButtonInteraction,
-  type ChatInputCommandInteraction,
   type Interaction,
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
@@ -24,7 +23,7 @@ import { renderNight } from "./night-render.js";
 import { deleteScheduledEvent, updateScheduledEventMovie } from "./scheduled-event.js";
 import { renderSuggestion } from "./suggestion-render.js";
 import { TmdbClient, type MovieDetails, type MovieMatch } from "./tmdb.js";
-import type { CommandFactory, CommandModule } from "../types.js";
+import type { CommandFactory, CommandModule, GuildCommandInteraction } from "../types.js";
 import type { MovieNight, MovieSuggestion, RsvpStatus } from "./types.js";
 
 const MAX_SUGGESTIONS = 25;
@@ -147,7 +146,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
     await Promise.allSettled(night.suggestions.map((suggestion) => deleteSuggestionCard(night, suggestion)));
   }
 
-  async function createNight(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
+  async function createNight(interaction: GuildCommandInteraction): Promise<void> {
     if (!isMovieNightChannel(interaction.channel?.name, channelName)) {
       const configuredChannel = interaction.guild.channels.cache.find((channel) => channel.name === channelName);
 
@@ -733,7 +732,7 @@ const createMovieNightCommand: CommandFactory = ({ client, store, config, assist
       )
       .toJSON(),
 
-    async execute(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
+    async execute(interaction: GuildCommandInteraction): Promise<void> {
       if (interaction.options.getSubcommand() === "create") await createNight(interaction);
     },
     handleInteraction,

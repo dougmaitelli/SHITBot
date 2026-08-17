@@ -5,7 +5,13 @@ import type {
   Client,
   Interaction,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
+  SendableChannels,
 } from "discord.js";
+
+export type GuildCommandInteraction = ChatInputCommandInteraction<"cached"> & {
+  channel: SendableChannels;
+  channelId: string;
+};
 
 export interface CommandContext {
   client: Client;
@@ -20,7 +26,7 @@ export interface CommandContext {
 
 export interface CommandModule {
   data: RESTPostAPIChatInputApplicationCommandsJSONBody;
-  execute(interaction: ChatInputCommandInteraction<"cached">): Promise<void>;
+  execute(interaction: GuildCommandInteraction): Promise<void>;
   handleInteraction?(interaction: Interaction): Promise<boolean>;
   onReady?(): Promise<void> | void;
 }

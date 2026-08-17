@@ -1,5 +1,5 @@
-import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js";
-import type { CommandFactory, CommandModule } from "../types.js";
+import { MessageFlags, SlashCommandBuilder } from "discord.js";
+import type { CommandFactory, CommandModule, GuildCommandInteraction } from "../types.js";
 
 const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -16,7 +16,7 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
       .setDescription("Send grease to every other text channel")
       .toJSON(),
 
-    async execute(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
+    async execute(interaction: GuildCommandInteraction): Promise<void> {
       const now = Date.now();
       const lastUsedAt = store.getGreaseLastUsedAt();
 

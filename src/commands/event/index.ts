@@ -4,7 +4,6 @@ import {
   SlashCommandBuilder,
   GuildScheduledEventStatus,
   type ButtonInteraction,
-  type ChatInputCommandInteraction,
   type Interaction,
 } from "discord.js";
 import { logger } from "../../logger.js";
@@ -20,7 +19,7 @@ import {
 import { renderEvent } from "./event-render.js";
 import { startExpirationJob } from "./expiration-job.js";
 import { deleteScheduledEvent } from "./scheduled-event.js";
-import type { CommandFactory, CommandModule } from "../types.js";
+import type { CommandFactory, CommandModule, GuildCommandInteraction } from "../types.js";
 import type { CommunityEvent } from "./types.js";
 
 const actions = new Set(["eventRsvp", "eventDelete"]);
@@ -38,7 +37,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     await message.edit(renderEvent(event));
   }
 
-  async function create(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
+  async function create(interaction: GuildCommandInteraction): Promise<void> {
     const name = interaction.options.getString("name", true).trim();
 
     if (!name) {
@@ -85,10 +84,6 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
-      const channel = interaction.channel;
-
-      if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("Event channel is not sendable");
-
       const event = await createCommunityEvent(
         client,
         store,
@@ -103,7 +98,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
           attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
           durationMinutes: interaction.options.getInteger("duration") ?? 180,
         },
-        (options) => channel.send(options),
+        (options) => interaction.channel.send(options),
       );
 
       await interaction.editReply(
@@ -124,7 +119,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
     }
   }
 
-  async function importEvent(interaction: ChatInputCommandInteraction<"cached">): Promise<void> {
+  async function importEvent(interaction: GuildCommandInteraction): Promise<void> {
     let scheduledEventId: string;
 
     try {
@@ -178,14 +173,6 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         return;
       }
 
-      const channel = interaction.channel;
-
-      if (!channel?.isTextBased() || !channel.isSendable()) {
-        await interaction.editReply("I can't post a managed event in this channel.");
-
-        return;
-      }
-
       const event = await adoptCommunityEvent(
         store,
         {
@@ -195,7 +182,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
           attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
         },
         scheduledEvent,
-        (options) => channel.send(options),
+        (options) => interaction.channel.send(options),
       );
 
       await interaction.editReply(

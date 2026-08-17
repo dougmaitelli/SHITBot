@@ -16,7 +16,7 @@ import { logger } from "./logger.js";
 import { startReminderJob } from "./reminders/index.js";
 import { BotStore } from "./store.js";
 import type { AssistantTool } from "./assistant/types.js";
-import type { CommandContext, CommandModule } from "./commands/types.js";
+import type { CommandContext, CommandModule, GuildCommandInteraction } from "./commands/types.js";
 
 process.on("unhandledRejection", (error) => {
   logger.fatal("Unhandled promise rejection", { error });
@@ -73,6 +73,10 @@ async function reportInteractionError(interaction: Interaction, error: unknown):
       notificationError,
     });
   }
+}
+
+function isGuildCommandInteraction(interaction: Interaction): interaction is GuildCommandInteraction {
+  return interaction.isChatInputCommand() && interaction.inCachedGuild() && Boolean(interaction.channel?.isSendable());
 }
 
 const token = requiredEnv("DISCORD_TOKEN");
@@ -161,9 +165,9 @@ async function handleInteraction(interaction: Interaction): Promise<void> {
       const command = commandsByName.get(interaction.commandName);
 
       if (!command) logger.warn("No handler registered for command", interactionContext);
-      else if (!interaction.inCachedGuild() || !interaction.channelId) {
+      else if (!isGuildCommandInteraction(interaction)) {
         await interaction.reply({
-          content: "Commands can only be used in a server channel.",
+          content: "Commands can only be used in a server channel where I can send messages.",
           flags: MessageFlags.Ephemeral,
         });
       } else await command.execute(interaction);
