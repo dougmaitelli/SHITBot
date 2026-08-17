@@ -26,28 +26,39 @@ export interface AdoptCommunityEventInput {
 
 export function parseEventLink(value: string | undefined): string | undefined {
   const link = value?.trim() || undefined;
+
   if (!link) return undefined;
+
   const url = new URL(link);
+
   if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Unsupported URL protocol");
+
   return link;
 }
 
 export function parseScheduledEventReference(value: string, guildId: string): string {
   const reference = value.trim();
+
   if (/^\d{15,22}$/.test(reference)) return reference;
+
   let url: URL;
+
   try {
     url = new URL(reference);
   } catch {
     throw new Error("Invalid Discord event reference");
   }
+
   if (url.protocol !== "https:" || !/(?:^|\.)discord\.com$/i.test(url.hostname)) {
     throw new Error("Invalid Discord event host");
   }
+
   const [, kind, referencedGuildId, eventId] = url.pathname.split("/");
+
   if (kind !== "events" || referencedGuildId !== guildId || !eventId || !/^\d{15,22}$/.test(eventId)) {
     throw new Error("Invalid Discord event URL");
   }
+
   return eventId;
 }
 
@@ -75,12 +86,15 @@ export async function createCommunityEvent(
     rsvps: {},
     createdAt: Date.now(),
   };
+
   event.scheduledEventId = await createScheduledEvent(input.guild, event, input.durationMinutes);
   let message: Awaited<ReturnType<SendEventMessage>> | undefined;
+
   try {
     message = await sendMessage(renderEvent(event));
     event.messageId = message.id;
     await store.setEvent(event);
+
     return event;
   } catch (error) {
     await message?.delete().catch(() => undefined);
@@ -96,6 +110,7 @@ export async function adoptCommunityEvent(
   sendMessage: SendEventMessage,
 ): Promise<CommunityEvent> {
   if (!scheduledEvent.scheduledStartTimestamp) throw new Error("The Discord event has no start time.");
+
   const event: CommunityEvent = {
     id: randomUUID().slice(0, 8),
     guildId: input.guildId,
@@ -111,10 +126,12 @@ export async function adoptCommunityEvent(
     createdAt: Date.now(),
   };
   let message: Awaited<ReturnType<SendEventMessage>> | undefined;
+
   try {
     message = await sendMessage(renderEvent(event));
     event.messageId = message.id;
     await store.setEvent(event);
+
     return event;
   } catch (error) {
     await message?.delete().catch(() => undefined);

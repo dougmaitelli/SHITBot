@@ -2,6 +2,7 @@ import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } f
 import type { CommandFactory, CommandModule } from "../types.js";
 
 const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
 export const GREASE_SUCCESS_CHANCE = 0.05;
 
 export function greaseSucceeds(random: () => number = Math.random): boolean {
@@ -21,17 +22,21 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
           content: "The grease command can only be used in a server.",
           flags: MessageFlags.Ephemeral,
         });
+
         return;
       }
 
       const now = Date.now();
       const lastUsedAt = store.getGreaseLastUsedAt();
+
       if (lastUsedAt && now - lastUsedAt < COOLDOWN_MS) {
         const availableAt = Math.floor((lastUsedAt + COOLDOWN_MS) / 1000);
+
         await interaction.reply({
           content: `Grease is on cooldown. It will be available <t:${availableAt}:R>.`,
           flags: MessageFlags.Ephemeral,
         });
+
         return;
       }
 
@@ -41,7 +46,10 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
 
       if (!succeeded) {
         await cooldownSave;
-        await interaction.reply({ content: `<@${interaction.user.id}> tried to cast grease and failed.` });
+        await interaction.reply({
+          content: `<@${interaction.user.id}> tried to cast grease and failed.`,
+        });
+
         return;
       }
 
@@ -49,6 +57,7 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
       await cooldownSave;
 
       const sends: Promise<unknown>[] = [];
+
       for (const channel of interaction.guild.channels.cache.values()) {
         if (channel.id !== interaction.channelId && channel.isTextBased() && channel.isSendable()) {
           sends.push(channel.send("🛢️ Grease!"));
@@ -58,6 +67,7 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
       const results = await Promise.allSettled(sends);
       const sent = results.filter((result) => result.status === "fulfilled").length;
       const failed = results.length - sent;
+
       await interaction.editReply(
         failed > 0
           ? `Greased ${sent} channel(s). I couldn't send to ${failed} channel(s), likely because of channel permissions.`

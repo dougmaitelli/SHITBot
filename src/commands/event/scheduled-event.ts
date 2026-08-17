@@ -17,6 +17,7 @@ export async function createScheduledEvent(
   ]
     .filter(Boolean)
     .join("\n\n");
+
   return createExternalScheduledEvent(guild, {
     name: event.name,
     description,

@@ -20,6 +20,7 @@ export class BotStore {
   async load(): Promise<void> {
     try {
       const saved = JSON.parse(await readFile(this.filename, "utf8")) as Partial<StoreData>;
+
       this.data = {
         nights: saved.nights ?? {},
         events: saved.events ?? {},
@@ -28,6 +29,7 @@ export class BotStore {
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+
       await this.save();
     }
   }
@@ -42,11 +44,13 @@ export class BotStore {
 
   set(night: MovieNight): Promise<void> {
     this.data.nights[night.id] = night;
+
     return this.save();
   }
 
   delete(id: string): Promise<void> {
     delete this.data.nights[id];
+
     return this.save();
   }
 
@@ -60,11 +64,13 @@ export class BotStore {
 
   setEvent(event: CommunityEvent): Promise<void> {
     this.data.events[event.id] = event;
+
     return this.save();
   }
 
   deleteEvent(id: string): Promise<void> {
     delete this.data.events[id];
+
     return this.save();
   }
 
@@ -74,11 +80,13 @@ export class BotStore {
 
   setReminder(reminder: EventReminder): Promise<void> {
     this.data.reminders[reminder.id] = reminder;
+
     return this.save();
   }
 
   deleteReminder(id: string): Promise<void> {
     delete this.data.reminders[id];
+
     return this.save();
   }
 
@@ -95,9 +103,11 @@ export class BotStore {
     this.saveQueue = this.saveQueue.then(async () => {
       await mkdir(dirname(this.filename), { recursive: true });
       const temporary = `${this.filename}.tmp`;
+
       await writeFile(temporary, JSON.stringify(this.data, null, 2), "utf8");
       await rename(temporary, this.filename);
     });
+
     return this.saveQueue;
   }
 }

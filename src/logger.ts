@@ -22,6 +22,7 @@ export function createLogger(destination?: DestinationStream): AppLogger {
     },
   };
   const base = destination ? pino(options, destination) : pino(options);
+
   return {
     debug: (message, fields = {}) => base.debug(fields, message),
     info: (message, fields = {}) => base.info(fields, message),

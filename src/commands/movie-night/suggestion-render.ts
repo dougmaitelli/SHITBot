@@ -24,9 +24,12 @@ export function renderSuggestion(night: MovieNight, suggestion: MovieSuggestion)
       { name: "Votes", value: suggestion.voters.length.toString(), inline: true },
       { name: "Suggested by", value: `<@${suggestion.suggestedBy}>`, inline: true },
     )
-    .setFooter({ text: "This product uses the TMDB API but is not endorsed or certified by TMDB." });
+    .setFooter({
+      text: "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+    });
 
   if (suggestion.imdbId) embed.setURL(`https://www.imdb.com/title/${suggestion.imdbId}/`);
+
   if (suggestion.posterUrl) embed.setThumbnail(suggestion.posterUrl);
 
   const buttons = new ActionRowBuilder<ButtonBuilder>().addComponents(

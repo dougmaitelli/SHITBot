@@ -7,6 +7,7 @@ const losAngeles = "America/Los_Angeles";
 
 function parse(input: string, timeZone = losAngeles): Date | null {
   const timestamp = parseDate(input, timeZone, referenceDate);
+
   return timestamp === null ? null : new Date(timestamp * 1000);
 }
 

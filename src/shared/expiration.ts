@@ -16,14 +16,17 @@ interface ExpirationOptions<T extends Expirable> {
 
 export async function closeExpired<T extends Expirable>(options: ExpirationOptions<T>): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
+
   for (const item of options.list().filter((candidate) => !candidate.closedAt && candidate.startsAt <= now)) {
     item.closedAt = Date.now();
     await options.save(item);
-    await options
-      .updateMessage(item)
-      .catch((error) =>
-        logger.error("Could not update closed item message", { error, itemType: options.itemName, itemId: item.id }),
-      );
+    await options.updateMessage(item).catch((error) =>
+      logger.error("Could not update closed item message", {
+        error,
+        itemType: options.itemName,
+        itemId: item.id,
+      }),
+    );
   }
 }
 
@@ -32,6 +35,8 @@ export function startExpirationJob<T extends Expirable>(options: ExpirationOptio
     void closeExpired(options).catch((error) =>
       logger.error("Could not close expired items", { error, itemType: options.itemName }),
     );
+
   run();
+
   return setInterval(run, options.intervalMs ?? 30_000);
 }

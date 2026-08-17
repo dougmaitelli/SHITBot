@@ -15,10 +15,13 @@ const emojis: Record<RsvpStatus, string> = { yes: "✅", maybe: "🤔", no: "✖
 export function setRsvp(rsvps: Rsvps, userId: string, status: RsvpStatus, attendanceLimit?: number): boolean {
   const alreadyGoing = rsvps[userId] === "yes";
   const goingCount = Object.values(rsvps).filter((value) => value === "yes").length;
+
   if (status === "yes" && !alreadyGoing && attendanceLimit !== undefined && goingCount >= attendanceLimit) {
     return false;
   }
+
   rsvps[userId] = status;
+
   return true;
 }
 
@@ -28,6 +31,7 @@ export function buildRsvpFields(rsvps: Rsvps, attendanceLimit?: number): APIEmbe
       .filter(([, value]) => value === status)
       .map(([id]) => `<@${id}>`);
     const mentions = users.length ? users.join(", ") : "Nobody yet";
+
     return {
       name: `${labels[status]} (${users.length}${status === "yes" && attendanceLimit !== undefined ? ` / ${attendanceLimit}` : ""})`,
       value: mentions.length > 1024 ? `${mentions.slice(0, 1021)}...` : mentions,

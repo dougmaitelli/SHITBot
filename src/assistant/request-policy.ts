@@ -11,6 +11,7 @@ const artifactRequest =
 
 export function isAllowedAssistantRequest(prompt: string, hasAttachments = false): boolean {
   if (hasAttachments) return false;
+
   return (
     !creationRequest.test(prompt) &&
     !executionRequest.test(prompt) &&

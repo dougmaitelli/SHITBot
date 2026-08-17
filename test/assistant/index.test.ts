@@ -9,6 +9,7 @@ describe("boundedReply", () => {
 
   it("truncates responses to the exact configured limit", () => {
     const result = boundedReply("abcdefghijklmnopqrstuvwxyz", 10);
+
     assert.equal(result, "abcdefg...");
     assert.equal(result.length, 10);
   });

@@ -41,12 +41,15 @@ export async function createMovieNight(
     suggestions: [],
     createdAt: Date.now(),
   };
+
   night.scheduledEventId = await createScheduledEvent(input.guild, night, input.durationMinutes);
   let message: Awaited<ReturnType<SendNightMessage>> | undefined;
+
   try {
     message = await sendMessage(renderNight(night));
     night.messageId = message.id;
     await store.set(night);
+
     return night;
   } catch (error) {
     await message?.delete().catch(() => undefined);

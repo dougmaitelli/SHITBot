@@ -14,6 +14,7 @@ function renderSuggestion(suggestion: MovieSuggestion): string {
   const linkedTitle = suggestion.imdbId
     ? `[${escapedTitle}](https://www.imdb.com/title/${suggestion.imdbId}/)`
     : `**${title}**`;
+
   return `${linkedTitle} — ${suggestion.voters.length} vote(s) · suggested by <@${suggestion.suggestedBy}>`;
 }
 

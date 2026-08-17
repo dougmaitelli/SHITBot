@@ -28,6 +28,14 @@ export default tseslint.config(
         },
       ],
       "no-console": "error",
+      "padding-line-between-statements": [
+        "warn",
+        { blankLine: "always", prev: "*", next: "return" },
+        { blankLine: "always", prev: ["const", "let", "var"], next: "*" },
+        { blankLine: "any", prev: ["const", "let", "var"], next: ["const", "let", "var"] },
+        { blankLine: "always", prev: "*", next: ["if", "for", "while", "switch"] },
+        { blankLine: "always", prev: ["if", "for", "while", "switch"], next: "*" },
+      ],
     },
   },
   {

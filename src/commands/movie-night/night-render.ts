@@ -9,6 +9,7 @@ function isClosed(night: MovieNight): boolean {
 
 function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
   const activityFields = buildRsvpFields(night.rsvps, night.attendanceLimit);
+
   if (night.scheduledEventId) {
     activityFields.unshift({
       name: "Discord event",
@@ -16,6 +17,7 @@ function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
       inline: true,
     });
   }
+
   if (night.votingOpen) activityFields.push(buildSuggestionField(night));
 
   return new EmbedBuilder()
@@ -42,6 +44,7 @@ function buildDeleteButton(night: MovieNight): ButtonBuilder {
 
 function buildActionButtons(night: MovieNight, closed: boolean): ActionRowBuilder<ButtonBuilder> {
   const row = new ActionRowBuilder<ButtonBuilder>();
+
   if (night.votingOpen) {
     row.addComponents(
       new ButtonBuilder()
@@ -64,11 +67,13 @@ function buildActionButtons(night: MovieNight, closed: boolean): ActionRowBuilde
         .setDisabled(closed || night.suggestions.length === 0),
     );
   }
+
   return row.addComponents(buildDeleteButton(night));
 }
 
 export function renderNight(night: MovieNight) {
   const closed = isClosed(night);
+
   return {
     embeds: [buildEmbed(night, closed)],
     components: [buildRsvpButtons(night.id, "rsvp", closed), buildActionButtons(night, closed)],

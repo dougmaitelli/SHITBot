@@ -16,6 +16,7 @@ describe("TmdbClient", () => {
     const client = new TmdbClient("secret-token", async (input, init) => {
       requestedUrl = new URL(input.toString());
       requestedAuthorization = new Headers(init?.headers).get("authorization");
+
       return jsonResponse({
         results: [
           { id: 348, title: "Alien", release_date: "1979-05-25" },
@@ -41,6 +42,7 @@ describe("TmdbClient", () => {
     let requestedUrl: URL | undefined;
     const client = new TmdbClient("token", async (input) => {
       requestedUrl = new URL(input.toString());
+
       return jsonResponse({
         id: 348,
         title: "Alien",
@@ -73,11 +75,13 @@ describe("TmdbClient", () => {
         external_ids: { imdb_id: "not-an-imdb-id" },
       }),
     );
+
     assert.equal((await client.getMovieDetails(348)).imdbId, undefined);
   });
 
   it("throws when TMDB returns an error", async () => {
     const client = new TmdbClient("token", async () => jsonResponse({ status_message: "Unauthorized" }, 401));
+
     await assert.rejects(() => client.searchMovies("Alien"), /status 401/);
   });
 });

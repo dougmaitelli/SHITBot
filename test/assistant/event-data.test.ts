@@ -6,6 +6,7 @@ import { BotStore } from "../../src/store.js";
 describe("assistant event data", () => {
   it("combines and orders upcoming events and movie nights", async () => {
     const store = new BotStore("/tmp/moviebot-event-data-test.json");
+
     await store.set({
       id: "night",
       guildId: "guild",
@@ -34,6 +35,7 @@ describe("assistant event data", () => {
     });
 
     const items = upcomingItems(store, "guild", 100);
+
     assert.deepEqual(
       items.map((item) => item.ref),
       ["event:event", "movie-night:night"],

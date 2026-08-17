@@ -17,9 +17,11 @@ export async function loadCommandFactories(): Promise<CommandFactory[]> {
     commandDirectories.map(async (directory) => {
       const moduleUrl = new URL(`./${directory}/index.js`, commandsDirectory);
       const commandModule = (await import(moduleUrl.href)) as CommandModuleExport;
+
       if (typeof commandModule.default !== "function") {
         throw new TypeError(`Command module ${directory}/index must default-export a command factory`);
       }
+
       return commandModule.default as CommandFactory;
     }),
   );

@@ -30,8 +30,11 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
   registerEventAssistantTools(client, store, assistantTools, config.timeZone, config.movieNightsChannel);
   async function updateMessage(event: CommunityEvent): Promise<void> {
     const channel = await client.channels.fetch(event.channelId);
+
     if (!channel?.isTextBased() || channel.isDMBased()) return;
+
     const message = await channel.messages.fetch(event.messageId);
+
     await message.edit(renderEvent(event));
   }
 
@@ -41,14 +44,23 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "Events can only be created in a server channel.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
+
     const name = interaction.options.getString("name", true).trim();
+
     if (!name) {
-      await interaction.reply({ content: "The event name can't be blank.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "The event name can't be blank.",
+        flags: MessageFlags.Ephemeral,
+      });
+
       return;
     }
+
     let link: string | undefined;
+
     try {
       link = parseEventLink(interaction.options.getString("link") ?? undefined);
     } catch {
@@ -56,25 +68,36 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "The event link must be a valid `http://` or `https://` URL.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
     const startsAt = parseDate(interaction.options.getString("when", true), config.timeZone);
+
     if (!startsAt) {
       await interaction.reply({
         content:
           "I couldn't understand that date and time. Try `2 october 7pm`, `08/15/2026 19:30`, or `2026-08-15 19:30-07:00`.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
+
     if (startsAt <= Math.floor(Date.now() / 1000)) {
-      await interaction.reply({ content: "The event must be scheduled in the future.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "The event must be scheduled in the future.",
+        flags: MessageFlags.Ephemeral,
+      });
+
       return;
     }
+
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       const channel = interaction.channel;
+
       if (!channel?.isTextBased() || !channel.isSendable()) throw new Error("Event channel is not sendable");
+
       const event = await createCommunityEvent(
         client,
         store,
@@ -91,6 +114,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         },
         (options) => channel.send(options),
       );
+
       await interaction.editReply(
         `Created **${event.name}**. [View the event](https://discord.com/channels/${event.guildId}/${event.channelId}/${event.messageId}).`,
       );
@@ -115,9 +139,12 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "Events can only be imported in a server channel.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
+
     let scheduledEventId: string;
+
     try {
       scheduledEventId = parseScheduledEventReference(
         interaction.options.getString("discord-event", true),
@@ -128,8 +155,10 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "Provide a valid Discord scheduled-event ID or copied event link from this server.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
+
     if (
       store
         .listEvents()
@@ -140,32 +169,41 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "That Discord event is already managed by the bot.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
 
     await interaction.deferReply();
     try {
       const scheduledEvent = await interaction.guild.scheduledEvents.fetch(scheduledEventId);
+
       if (
         scheduledEvent.status !== GuildScheduledEventStatus.Scheduled ||
         !scheduledEvent.scheduledStartTimestamp ||
         scheduledEvent.scheduledStartTimestamp <= Date.now()
       ) {
         await interaction.editReply("Only a future scheduled Discord event can be imported.");
+
         return;
       }
+
       if (
         scheduledEvent.creatorId !== interaction.user.id &&
         !interaction.memberPermissions.has(PermissionFlagsBits.ManageEvents)
       ) {
         await interaction.editReply("Only the Discord event creator or someone with Manage Events can import it.");
+
         return;
       }
+
       const channel = interaction.channel;
+
       if (!channel?.isTextBased() || !channel.isSendable()) {
         await interaction.editReply("I can't post a managed event in this channel.");
+
         return;
       }
+
       const event = await adoptCommunityEvent(
         store,
         {
@@ -177,6 +215,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         scheduledEvent,
         (options) => channel.send(options),
       );
+
       await interaction.editReply(
         `Imported **${event.name}**. [View the managed event](https://discord.com/channels/${event.guildId}/${event.channelId}/${event.messageId}).`,
       );
@@ -200,20 +239,30 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
         content: "This event has reached its attendance limit.",
         flags: MessageFlags.Ephemeral,
       });
+
       return;
     }
+
     await store.setEvent(event);
     await interaction.update(renderEvent(event));
   }
 
   async function remove(interaction: ButtonInteraction, event: CommunityEvent): Promise<void> {
     if (interaction.user.id !== event.creatorId) {
-      await interaction.reply({ content: "Only the event organizer can delete it.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "Only the event organizer can delete it.",
+        flags: MessageFlags.Ephemeral,
+      });
+
       return;
     }
+
     await interaction.deferUpdate();
     await deleteScheduledEvent(client, event).catch((error) =>
-      logger.error("Could not delete scheduled event", { error, scheduledEventId: event.scheduledEventId }),
+      logger.error("Could not delete scheduled event", {
+        error,
+        scheduledEventId: event.scheduledEventId,
+      }),
     );
     await store.deleteEvent(event.id);
     await interaction.message.delete().catch((error: unknown) => {
@@ -223,31 +272,41 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
 
   async function handleInteraction(interaction: Interaction): Promise<boolean> {
     if (!interaction.isButton()) return false;
+
     const [action, eventId, value] = interaction.customId.split(":");
+
     if (!action || !actions.has(action)) return false;
+
     const event = eventId ? store.getEvent(eventId) : undefined;
+
     if (!event) {
       await interaction.reply({
         content: "I couldn't find that event. It may have been removed.",
         flags: MessageFlags.Ephemeral,
       });
+
       return true;
     }
+
     if (isClosed(event) && action !== "eventDelete") {
       if (!event.closedAt) {
         event.closedAt = Date.now();
         await store.setEvent(event);
         await updateMessage(event).catch(() => undefined);
       }
+
       await interaction.reply({
         content: "This event has started and is no longer editable.",
         flags: MessageFlags.Ephemeral,
       });
+
       return true;
     }
+
     if (action === "eventRsvp" && (value === "yes" || value === "maybe" || value === "no"))
       await rsvp(interaction, event, value);
     else if (action === "eventDelete") await remove(interaction, event);
+
     return true;
   }
 
@@ -310,6 +369,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
       .toJSON(),
     async execute(interaction) {
       const subcommand = interaction.options.getSubcommand();
+
       if (subcommand === "create") await create(interaction);
       else if (subcommand === "import") await importEvent(interaction);
     },

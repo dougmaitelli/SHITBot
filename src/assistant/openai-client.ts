@@ -42,9 +42,11 @@ export class OpenAICompatibleClient {
     systemPrompt: string,
   ): Promise<string> {
     const availableTools: AssistantTool[] = [];
+
     for (const tool of tools) {
       if (!tool.isAvailable || (await tool.isAvailable(context))) availableTools.push(tool);
     }
+
     const messages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
       { role: "user", content: prompt },
@@ -55,24 +57,34 @@ export class OpenAICompatibleClient {
     while (toolCallsUsed < MAX_TOOL_CALLS) {
       const response = await this.complete(messages, availableTools);
       const message = response.choices?.[0]?.message;
+
       if (!message) throw new Error(response.error?.message ?? "The AI provider returned no response.");
+
       const calls = message.tool_calls ?? [];
+
       if (calls.length === 0) return this.validatedContent(message.content, messages);
 
-      logger.info("LLM requested tools", { model: this.config.model, tools: calls.map((call) => call.function.name) });
+      logger.info("LLM requested tools", {
+        model: this.config.model,
+        tools: calls.map((call) => call.function.name),
+      });
 
       messages.push({ role: "assistant", content: message.content ?? null, tool_calls: calls });
+
       for (const call of calls) {
         toolCallsUsed += 1;
         let result: string;
+
         if (toolCallsUsed > MAX_TOOL_CALLS) {
           result = "Tool limit reached. Do not call more tools; explain this to the user.";
         } else {
           const tool = availableTools.find((candidate) => candidate.name === call.function.name);
+
           if (!tool) result = `Unknown tool: ${call.function.name}`;
           else {
             try {
               const argumentsValue = JSON.parse(call.function.arguments) as unknown;
+
               result = await tool.execute(context, argumentsValue);
             } catch (error) {
               logger.warn("Assistant tool execution failed", { tool: tool.name, error });
@@ -80,20 +92,24 @@ export class OpenAICompatibleClient {
             }
           }
         }
+
         const boundedResult =
           result.length <= MAX_TOOL_RESULT_CHARACTERS
             ? result
             : `${result.slice(0, MAX_TOOL_RESULT_CHARACTERS)}\n[Tool result truncated]`;
+
         messages.push({ role: "tool", tool_call_id: call.id, content: boundedResult });
       }
     }
 
     const final = await this.complete(messages, []);
+
     return this.validatedContent(final.choices?.[0]?.message?.content, messages);
   }
 
   private async validatedContent(content: string | null | undefined, messages: ChatMessage[]): Promise<string> {
     const text = content?.trim() || "I don't have a response for that.";
+
     if (!toolProtocolPattern.test(text)) return text;
 
     const retry = await this.complete(
@@ -108,16 +124,21 @@ export class OpenAICompatibleClient {
       [],
     );
     const retried = retry.choices?.[0]?.message?.content?.trim();
+
     if (!retried || toolProtocolPattern.test(retried))
       throw new Error("The AI provider returned tool protocol as visible text.");
+
     return retried;
   }
 
   private async complete(messages: ChatMessage[], tools: AssistantTool[]): Promise<CompletionResponse> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
+
     if (this.config.apiKey) headers.Authorization = `Bearer ${this.config.apiKey}`;
+
     const startedAt = Date.now();
     let response: Response;
+
     try {
       response = await fetch(`${this.config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
         method: "POST",
@@ -129,7 +150,11 @@ export class OpenAICompatibleClient {
           ...(tools.length && {
             tools: tools.map((tool) => ({
               type: "function",
-              function: { name: tool.name, description: tool.description, parameters: tool.parameters },
+              function: {
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.parameters,
+              },
             })),
             tool_choice: "auto",
           }),
@@ -147,6 +172,7 @@ export class OpenAICompatibleClient {
     }
     const body = await response.text();
     let parsed: CompletionResponse;
+
     try {
       parsed = JSON.parse(body) as CompletionResponse;
     } catch {
@@ -157,6 +183,7 @@ export class OpenAICompatibleClient {
       });
       throw new Error(`The AI provider returned invalid JSON (HTTP ${response.status}).`);
     }
+
     if (!response.ok) {
       logger.error("LLM provider returned an error", {
         model: this.config.model,
@@ -166,12 +193,14 @@ export class OpenAICompatibleClient {
       });
       throw new Error(parsed.error?.message ?? `AI provider request failed with HTTP ${response.status}.`);
     }
+
     logger.info("LLM provider request completed", {
       model: this.config.model,
       status: response.status,
       durationMs: Date.now() - startedAt,
       toolCount: tools.length,
     });
+
     return parsed;
   }
 }

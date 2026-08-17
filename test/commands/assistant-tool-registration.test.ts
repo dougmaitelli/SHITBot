@@ -12,6 +12,7 @@ describe("domain assistant-tool registration", () => {
     const store = new BotStore("/tmp/moviebot-tool-registration-test.json");
     const eventTools: AssistantTool[] = [];
     const movieTools: AssistantTool[] = [];
+
     registerEventAssistantTools(client, store, eventTools, "UTC", "movie-nights");
     registerMovieNightAssistantTools(client, store, movieTools, "UTC", async () => undefined);
 

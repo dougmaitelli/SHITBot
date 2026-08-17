@@ -26,9 +26,12 @@ describe("Discord scheduled-event assistant tools", () => {
       scheduledEvents: { fetch: async () => new Map([[scheduled.id, scheduled]]) },
     } as unknown as Guild;
     const client = {
-      channels: { fetch: async () => ({ isTextBased: () => true, isDMBased: () => false, name: "general" }) },
+      channels: {
+        fetch: async () => ({ isTextBased: () => true, isDMBased: () => false, name: "general" }),
+      },
     } as unknown as Client;
     const tools: AssistantTool[] = [];
+
     registerEventAssistantTools(
       client,
       new BotStore("/tmp/moviebot-discord-events-test.json"),
@@ -41,6 +44,7 @@ describe("Discord scheduled-event assistant tools", () => {
     const result = JSON.parse(await list.execute({ guild, channelId: "general", userId: "user" }, {})) as {
       events: Array<Record<string, unknown>>;
     };
+
     assert.equal(result.events[0]?.id, "discord-event:123");
     assert.equal(result.events[0]?.title, "Community Town Hall");
     assert.equal(result.events[0]?.discord_interested, 42);

@@ -22,6 +22,7 @@ function timeZoneOffsetMilliseconds(timeZone: string, instant: Date): number {
   }).formatToParts(instant);
   const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
   const instantWithoutMilliseconds = Math.floor(instant.getTime() / 1000) * 1000;
+
   return (
     Date.UTC(value("year"), value("month") - 1, value("day"), value("hour"), value("minute"), value("second")) -
     instantWithoutMilliseconds
@@ -34,15 +35,20 @@ function zonedDateTimeToDate(parts: DateTimeParts, timeZone: string): Date {
 
   // Recalculate at the resulting instant because the first estimate may cross a daylight-saving boundary.
   result = wallClockAsUtc - timeZoneOffsetMilliseconds(timeZone, new Date(result));
+
   return new Date(result);
 }
 
 function explicitOffsetMinutes(input: string): number | null {
   if (/Z\s*$/i.test(input)) return 0;
+
   const match = /([+-])(\d{2}):(\d{2})\s*$/.exec(input);
+
   if (!match) return null;
+
   const [, sign, hours, minutes] = match;
   const offset = Number(hours) * 60 + Number(minutes);
+
   return sign === "-" ? -offset : offset;
 }
 
@@ -50,11 +56,14 @@ export function parseDate(input: string, timeZone: string, now = new Date()): nu
   // This also validates the configured IANA timezone and throws a clear RangeError if it is invalid.
   const currentOffsetMinutes = timeZoneOffsetMilliseconds(timeZone, now) / 60_000;
   const result = chrono.parse(input.trim(), { instant: now, timezone: currentOffsetMinutes }, { forwardDate: true })[0];
+
   if (!result) return null;
+
   if (!result.start.isCertain("month") || !result.start.isCertain("day") || !result.start.isCertain("hour"))
     return null;
 
   const numericOffset = explicitOffsetMinutes(input);
+
   if (numericOffset !== null) {
     const wallClockAsUtc = Date.UTC(
       result.start.get("year")!,
@@ -64,6 +73,7 @@ export function parseDate(input: string, timeZone: string, now = new Date()): nu
       result.start.get("minute") ?? 0,
       result.start.get("second") ?? 0,
     );
+
     return Math.floor((wallClockAsUtc - numericOffset * 60_000) / 1000);
   }
 
@@ -82,5 +92,6 @@ export function parseDate(input: string, timeZone: string, now = new Date()): nu
     },
     timeZone,
   );
+
   return Math.floor(date.getTime() / 1000);
 }

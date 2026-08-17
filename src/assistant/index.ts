@@ -26,8 +26,11 @@ export function boundedReply(value: string, maxCharacters: number): string {
     (_match, milliseconds: string, style?: string) =>
       `<t:${Math.floor(Number(milliseconds) / 1000)}${style ? `:${style}` : ""}>`,
   );
+
   if (normalized.length <= maxCharacters) return normalized;
+
   if (maxCharacters <= 3) return ".".repeat(maxCharacters);
+
   return `${normalized.slice(0, maxCharacters - 3)}...`;
 }
 
@@ -39,6 +42,7 @@ export function startAssistant(client: Client, tools: AssistantTool[], config: A
 
   const handleMessage = async (message: Message): Promise<void> => {
     if (!client.user || message.author.bot || !message.inGuild() || !message.mentions.users.has(client.user.id)) return;
+
     const prompt = promptFromMention(message, client.user.id);
     const request = {
       requestId: message.id,
@@ -53,47 +57,62 @@ export function startAssistant(client: Client, tools: AssistantTool[], config: A
         logger.error("Assistant reply failed", { ...request, error });
       }
     };
+
     logger.info("Assistant mention received", {
       ...request,
       promptCharacters: prompt.length,
       hasAttachments: message.attachments.size > 0,
     });
+
     if (!prompt) {
       await reply("What would you like me to do?");
+
       return;
     }
+
     if (prompt.length > config.maxInputCharacters) {
       await reply(
         `That request is too long. Please keep it under ${config.maxInputCharacters.toLocaleString()} characters.`,
       );
+
       return;
     }
+
     if (activeUsers.has(message.author.id)) {
       await reply("I'm already working on your previous request.");
+
       return;
     }
 
     const userLimit = users.consume(`${message.guildId}:${message.author.id}`);
+
     if (!userLimit.allowed) {
       await reply(
         `I'm receiving too many requests. Try again in ${Math.max(1, Math.ceil(userLimit.retryAfterMs / 60_000))} minute(s).`,
       );
+
       return;
     }
+
     const guildLimit = guilds.consume(message.guildId);
+
     if (!guildLimit.allowed) {
       await reply(
         `I'm receiving too many requests. Try again in ${Math.max(1, Math.ceil(guildLimit.retryAfterMs / 60_000))} minute(s).`,
       );
+
       return;
     }
+
     if (!isAllowedAssistantRequest(prompt, message.attachments.size > 0)) {
       await reply(REJECTED_REQUEST_MESSAGE);
+
       return;
     }
 
     activeUsers.add(message.author.id);
     const startedAt = Date.now();
+
     try {
       await message.channel.sendTyping();
       const response = await api.respond(
@@ -115,6 +134,7 @@ export function startAssistant(client: Client, tools: AssistantTool[], config: A
           `The configured timezone is ${config.timeZone}. The current time is ${new Date().toISOString()}.`,
         ].join(" "),
       );
+
       await reply(boundedReply(response, config.maxOutputCharacters));
       logger.info("Assistant request completed", {
         ...request,
@@ -122,12 +142,17 @@ export function startAssistant(client: Client, tools: AssistantTool[], config: A
         responseCharacters: response.length,
       });
     } catch (error) {
-      logger.error("Assistant request failed", { ...request, durationMs: Date.now() - startedAt, error });
+      logger.error("Assistant request failed", {
+        ...request,
+        durationMs: Date.now() - startedAt,
+        error,
+      });
       await reply("I couldn't complete that request right now.");
     } finally {
       activeUsers.delete(message.author.id);
     }
   };
+
   client.on(Events.MessageCreate, (message) => {
     void handleMessage(message).catch((error: unknown) => logger.error("Assistant message handler failed", { error }));
   });

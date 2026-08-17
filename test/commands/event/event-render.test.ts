@@ -25,6 +25,7 @@ describe("renderEvent", () => {
   it("renders event details, RSVP groups, and Discord event links", () => {
     const rendered = renderEvent(communityEvent());
     const embed = rendered.embeds[0].toJSON();
+
     assert.equal(embed.title, "📅 Board games");
     assert.match(embed.description ?? "", /Bring your favorites/);
     assert.equal(embed.fields?.find((field) => field.name === "Going (1 / 5)")?.value, "<@alice>");
@@ -38,8 +39,10 @@ describe("renderEvent", () => {
 
   it("disables RSVP controls after the event closes", () => {
     const event = communityEvent();
+
     event.closedAt = Date.now();
     const rendered = renderEvent(event);
+
     assert.ok(rendered.components[0]?.components.every((button) => button.toJSON().disabled));
     assert.equal(rendered.embeds[0].toJSON().footer?.text, "This event is closed");
   });

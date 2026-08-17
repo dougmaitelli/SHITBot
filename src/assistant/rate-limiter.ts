@@ -17,15 +17,22 @@ export class FixedWindowRateLimiter {
       for (const [bucketKey, bucket] of this.buckets) {
         if (bucket.resetsAt <= now) this.buckets.delete(bucketKey);
       }
+
       this.nextSweepAt = now + this.windowMs;
     }
+
     const current = this.buckets.get(key);
+
     if (!current || current.resetsAt <= now) {
       this.buckets.set(key, { count: 1, resetsAt: now + this.windowMs });
+
       return { allowed: true, retryAfterMs: 0 };
     }
+
     if (current.count >= this.limit) return { allowed: false, retryAfterMs: current.resetsAt - now };
+
     current.count += 1;
+
     return { allowed: true, retryAfterMs: 0 };
   }
 }

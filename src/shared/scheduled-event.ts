@@ -24,6 +24,7 @@ export async function createExternalScheduledEvent(guild: Guild, details: Schedu
     entityType: GuildScheduledEventEntityType.External,
     entityMetadata: { location: details.location.slice(0, 100) },
   });
+
   return event.id;
 }
 
@@ -33,12 +34,16 @@ export async function renameScheduledEvent(
   name: string,
 ): Promise<void> {
   if (!reference.scheduledEventId) return;
+
   const guild = await client.guilds.fetch(reference.guildId);
+
   await guild.scheduledEvents.edit(reference.scheduledEventId, { name: name.slice(0, 100) });
 }
 
 export async function deleteScheduledEvent(client: Client, reference: ScheduledEventReference): Promise<void> {
   if (!reference.scheduledEventId) return;
+
   const guild = await client.guilds.fetch(reference.guildId);
+
   await guild.scheduledEvents.delete(reference.scheduledEventId);
 }

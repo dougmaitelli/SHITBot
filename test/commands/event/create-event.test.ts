@@ -8,6 +8,7 @@ describe("Discord event import", () => {
   it("accepts an event ID or a same-server Discord event URL", () => {
     const guildId = "123456789012345678";
     const eventId = "987654321098765432";
+
     assert.equal(parseScheduledEventReference(eventId, guildId), eventId);
     assert.equal(parseScheduledEventReference(`https://discord.com/events/${guildId}/${eventId}`, guildId), eventId);
     assert.throws(
@@ -33,6 +34,7 @@ describe("Discord event import", () => {
       scheduledEvent,
       async (message) => {
         rendered = message;
+
         return { id: "message", async delete() {} };
       },
     );

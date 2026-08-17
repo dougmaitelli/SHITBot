@@ -43,11 +43,13 @@ export class TmdbClient {
 
   async searchMovies(query: string): Promise<MovieMatch[]> {
     const url = new URL("https://api.themoviedb.org/3/search/movie");
+
     url.searchParams.set("query", query);
     url.searchParams.set("include_adult", "false");
     url.searchParams.set("language", "en-US");
 
     const response = await this.request<SearchMovieResponse>(url);
+
     return (response.results ?? [])
       .filter(
         (result): result is SearchMovieResult & { id: number; title: string } =>
@@ -56,6 +58,7 @@ export class TmdbClient {
       .slice(0, 5)
       .map((result) => {
         const year = typeof result.release_date === "string" ? Number(result.release_date.slice(0, 4)) : NaN;
+
         return {
           tmdbId: result.id,
           title: result.title,
@@ -66,15 +69,18 @@ export class TmdbClient {
 
   async getMovieDetails(tmdbId: number): Promise<MovieDetails> {
     const url = new URL(`https://api.themoviedb.org/3/movie/${tmdbId}`);
+
     url.searchParams.set("append_to_response", "external_ids");
     url.searchParams.set("language", "en-US");
     const response = await this.request<MovieDetailsResponse>(url);
+
     if (typeof response.id !== "number" || typeof response.title !== "string") {
       throw new Error("TMDB returned invalid movie details");
     }
 
     const releaseYear = typeof response.release_date === "string" ? Number(response.release_date.slice(0, 4)) : NaN;
     const imdbId = response.external_ids?.imdb_id;
+
     return {
       tmdbId: response.id,
       title: response.title,
@@ -98,7 +104,9 @@ export class TmdbClient {
         authorization: `Bearer ${this.token}`,
       },
     });
+
     if (!response.ok) throw new Error(`TMDB request failed with status ${response.status}`);
+
     return (await response.json()) as T;
   }
 }

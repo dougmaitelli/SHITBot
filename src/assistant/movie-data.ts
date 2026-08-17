@@ -4,6 +4,7 @@ export function summarizeMovieNightSuggestions(store: BotStore, guildId: string,
   const match = /^movie-night:([a-zA-Z0-9-]+)$/.exec(ref);
   const night = match?.[1] ? store.get(match[1]) : undefined;
   const now = Math.floor(Date.now() / 1000);
+
   if (!night || night.guildId !== guildId || night.closedAt || night.startsAt <= now) return undefined;
 
   const suggestions = night.suggestions.map((suggestion) => ({
@@ -16,6 +17,7 @@ export function summarizeMovieNightSuggestions(store: BotStore, guildId: string,
     imdb_url: suggestion.imdbId ? `https://www.imdb.com/title/${suggestion.imdbId}/` : null,
   }));
   const highestVotes = suggestions.length ? Math.max(...suggestions.map((suggestion) => suggestion.votes)) : 0;
+
   return {
     id: ref,
     discord_time: `<t:${night.startsAt}:F>`,

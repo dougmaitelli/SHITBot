@@ -8,6 +8,7 @@ describe("event reminders", () => {
   it("posts due reminders without allowing mentions and removes them", async () => {
     const store = new BotStore("/tmp/moviebot-reminders-test.json");
     const now = Math.floor(Date.now() / 1000);
+
     await store.setEvent({
       id: "event",
       guildId: "guild",

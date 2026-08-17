@@ -9,7 +9,9 @@ function isClosed(event: CommunityEvent): boolean {
 export function renderEvent(event: CommunityEvent) {
   const closed = isClosed(event);
   const details: APIEmbedField[] = [];
+
   if (event.link) details.push({ name: "Link", value: `[Open link](${event.link})`, inline: true });
+
   if (event.scheduledEventId) {
     details.push({
       name: "Discord event",
@@ -41,5 +43,6 @@ export function renderEvent(event: CommunityEvent) {
       .setEmoji("🗑️")
       .setStyle(ButtonStyle.Danger),
   );
+
   return { embeds: [embed], components: [rsvps, actions] };
 }

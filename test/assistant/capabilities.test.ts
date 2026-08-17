@@ -16,6 +16,7 @@ describe("assistant capability catalog", () => {
     ]) {
       assert.match(BOT_CAPABILITIES, new RegExp(capability.replaceAll("/", "\\/"), "i"));
     }
+
     assert.doesNotMatch(BOT_CAPABILITIES, /\/event|\/movie-night|\/grease/i);
   });
 });
@@ -35,6 +36,7 @@ describe("assistant tool-use instructions", () => {
 
   it("instructs the model to finish within the configured output limit", () => {
     const instruction = outputLengthInstruction(1600);
+
     assert.match(instruction, /under 1600 characters/i);
     assert.match(instruction, /complete answer/i);
     assert.match(instruction, /do not end mid-sentence/i);

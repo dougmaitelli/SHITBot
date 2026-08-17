@@ -50,6 +50,7 @@ export function upcomingItems(store: BotStore, guildId: string, now = Math.floor
       attendanceLimit: night.attendanceLimit,
       rsvps: night.rsvps,
     }));
+
   return [...events, ...nights].sort((left, right) => left.startsAt - right.startsAt);
 }
 
@@ -65,6 +66,7 @@ export function attendance(item: UpcomingItem) {
   const going = users("yes");
   const maybe = users("maybe");
   const notGoing = users("no");
+
   return {
     goingCount: going.length,
     maybeCount: maybe.length,

@@ -16,6 +16,7 @@ function fixture(): { night: MovieNight; suggestion: MovieSuggestion } {
     suggestedBy: "user",
     voters: ["voter"],
   };
+
   return {
     suggestion,
     night: {
@@ -53,8 +54,10 @@ describe("renderSuggestion", () => {
 
   it("disables deletion after the movie night closes", () => {
     const { night, suggestion } = fixture();
+
     night.closedAt = Date.now();
     const button = renderSuggestion(night, suggestion).components[0].components[0].toJSON();
+
     assert.equal(button.disabled, true);
   });
 });
