@@ -42,6 +42,7 @@ describe("movie-night command composition", () => {
       ],
     );
     assert.equal(typeof command.handleInteraction, "function");
+    assert.equal(typeof command.onStoreLoaded, "function");
     assert.equal(typeof command.onReady, "function");
   });
 });

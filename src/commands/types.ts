@@ -32,6 +32,7 @@ export interface CommandModule {
   data: RESTPostAPIChatInputApplicationCommandsJSONBody;
   execute(interaction: GuildCommandInteraction): Promise<void>;
   handleInteraction?(interaction: Interaction): Promise<boolean>;
+  onStoreLoaded?(): Promise<void> | void;
   onReady?(): Promise<void> | void;
 }
 

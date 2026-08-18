@@ -11,16 +11,6 @@ import {
 } from "../../utils/date-parser.js";
 import type { CommunityEvent, EventSchedule } from "./types.js";
 
-export interface LegacyCommunityEvent extends Omit<CommunityEvent, "schedule"> {
-  schedule?: undefined;
-  startsAt: number;
-  durationMinutes?: number;
-  endsAt?: number;
-  fullDay?: boolean;
-}
-
-export type PersistedCommunityEvent = CommunityEvent | LegacyCommunityEvent;
-
 export interface EventScheduleInput {
   starts?: string;
   ends?: string;
@@ -177,31 +167,4 @@ export function editEventSchedule(current: EventSchedule, input: EventScheduleIn
   validateTimedEnd(endsAt, startsAt, timeZone);
 
   return { type: "timed", startsAt, endsAt };
-}
-
-export function normalizeCommunityEvent(event: PersistedCommunityEvent, timeZone: string): CommunityEvent {
-  if (event.schedule) return event;
-
-  const { startsAt, endsAt, durationMinutes, fullDay, ...rest } = event;
-  let schedule: EventSchedule;
-
-  if (fullDay) {
-    const startsOn = timestampToCalendarDate(startsAt, timeZone);
-    const exclusiveEnd = endsAt ?? calendarDateToTimestamp(addCalendarDays(startsOn, 1), timeZone);
-    const endsOn = timestampToCalendarDate(exclusiveEnd - 1, timeZone);
-
-    schedule = { type: "all-day", startsOn, endsOn, timeZone };
-  } else {
-    schedule = {
-      type: "timed",
-      startsAt,
-      endsAt: endsAt ?? startsAt + (durationMinutes ?? 180) * 60,
-    };
-  }
-
-  const migrated = { ...rest, schedule };
-
-  if (migrated.closedAt && eventEndsAt(migrated) > Math.floor(Date.now() / 1000)) delete migrated.closedAt;
-
-  return migrated;
 }

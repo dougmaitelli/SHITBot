@@ -1,4 +1,5 @@
 import { MessageFlags } from "discord.js";
+import { logger } from "../../logger.js";
 import { buildCommand } from "../command-schema.js";
 import type { CommandFactory, CommandModule, GuildCommandInteraction } from "../types.js";
 
@@ -16,6 +17,12 @@ const createGreaseCommand: CommandFactory = ({ store }): CommandModule => {
       name: "grease",
       description: "Send grease to every other text channel",
     }),
+
+    onStoreLoaded(): void {
+      logger.info("Grease module store loaded", {
+        greaseEntryCount: store.getGreaseLastUsedAt() === undefined ? 0 : 1,
+      });
+    },
 
     async execute(interaction: GuildCommandInteraction): Promise<void> {
       const now = Date.now();

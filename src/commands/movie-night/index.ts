@@ -1,3 +1,4 @@
+import { logger } from "../../logger.js";
 import { buildCommand } from "../command-schema.js";
 import { createMovieNightAssistantTools } from "./assistant-tools/index.js";
 import { isMovieNightChannel } from "./channel-policy.js";
@@ -56,6 +57,9 @@ const createMovieNightCommand: CommandFactory = (context): CommandModule => {
       await subcommands.get(interaction.options.getSubcommand())?.(interaction);
     },
     handleInteraction: createMovieNightInteractionHandler(context, messages, tmdb),
+    onStoreLoaded(): void {
+      logger.info("Movie-night module store loaded", { movieNightCount: store.list().length });
+    },
     onReady(): void {
       startExpirationJob(store, (night) => messages.updateAll(night));
     },

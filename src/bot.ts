@@ -178,7 +178,7 @@ async function registerCommands(config: BotConfig, commandModules: CommandModule
 }
 
 export async function startBot(config: BotConfig): Promise<void> {
-  const store = new BotStore(config.dataFile, config.commands.timeZone);
+  const store = new BotStore(config.dataFile);
   const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
   startHealthServer(client, config.healthPort);
@@ -205,6 +205,9 @@ export async function startBot(config: BotConfig): Promise<void> {
 
   await store.load();
   logger.info("Data store loaded", { dataFile: config.dataFile });
+
+  for (const commandModule of commandModules) await commandModule.onStoreLoaded?.();
+
   await registerCommands(config, commandModules);
 
   logger.info("Logging in to Discord");

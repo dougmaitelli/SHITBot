@@ -1,3 +1,4 @@
+import { logger } from "../../logger.js";
 import { buildCommand } from "../command-schema.js";
 import { createEventAssistantTools } from "./assistant-tools/index.js";
 import { startExpirationJob } from "./expiration-job.js";
@@ -31,6 +32,9 @@ const createEventCommand: CommandFactory = (context): CommandModule => {
       await subcommands.get(interaction.options.getSubcommand())?.(interaction);
     },
     handleInteraction: createEventInteractionHandler(context, messages),
+    onStoreLoaded(): void {
+      logger.info("Event module store loaded", { eventCount: store.listEvents().length });
+    },
     onReady(): void {
       startExpirationJob(store, (event) => messages.update(event));
     },
