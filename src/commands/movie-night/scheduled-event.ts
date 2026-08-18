@@ -1,6 +1,7 @@
 import {
   createExternalScheduledEvent,
   deleteScheduledEvent as deleteSharedScheduledEvent,
+  editExternalScheduledEvent,
   renameScheduledEvent,
 } from "../../shared/scheduled-event.js";
 import type { MovieNight } from "./types.js";
@@ -22,6 +23,16 @@ export async function createScheduledEvent(guild: Guild, night: MovieNight, dura
 
 export async function updateScheduledEventMovie(client: Client, night: MovieNight): Promise<void> {
   await renameScheduledEvent(client, night, eventName(night));
+}
+
+export async function updateScheduledEvent(client: Client, night: MovieNight): Promise<void> {
+  await editExternalScheduledEvent(client, night, {
+    name: eventName(night),
+    description: `Organized by <@${night.creatorId}>. RSVP and vote in <#${night.channelId}>.`,
+    startsAt: night.startsAt,
+    durationMinutes: night.durationMinutes ?? 180,
+    location: night.location,
+  });
 }
 
 export async function deleteScheduledEvent(client: Client, night: MovieNight): Promise<void> {

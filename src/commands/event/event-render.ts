@@ -20,6 +20,13 @@ export function renderEvent(event: CommunityEvent) {
     });
   }
 
+  const when = event.fullDay
+    ? event.endsAt
+      ? `<t:${event.startsAt}:D> – <t:${event.endsAt - 1}:D> (all day)`
+      : `<t:${event.startsAt}:D> (all day)`
+    : event.endsAt
+      ? `<t:${event.startsAt}:F> – <t:${event.endsAt}:F>\n<t:${event.startsAt}:R>`
+      : `<t:${event.startsAt}:F>\n<t:${event.startsAt}:R>`;
   const embed = new EmbedBuilder()
     .setColor(closed ? 0x747f8d : 0x5865f2)
     .setTitle(`📅 ${event.name}`)
@@ -29,7 +36,7 @@ export function renderEvent(event: CommunityEvent) {
         : `Organized by <@${event.creatorId}>`,
     )
     .addFields(
-      { name: "When", value: `<t:${event.startsAt}:F>\n<t:${event.startsAt}:R>`, inline: true },
+      { name: "When", value: when, inline: true },
       ...details,
       ...buildRsvpFields(event.rsvps, event.attendanceLimit),
     )

@@ -1,8 +1,10 @@
 export const BOT_CAPABILITIES = `
 Bot capabilities:
 - Answer short, ordinary general-knowledge questions when directly mentioned. Do not create or work with code, files, commands, or executable content.
-- Create a general event from natural language with a required name and date/time, plus optional description, link, duration, and attendance limit. General events are posted in the current channel.
+- Create a general event from natural language with a required name and start date/time, plus optional end date/time, all-day mode, description, link, duration, and attendance limit. General events are posted in the current channel.
+- Edit future bot-managed general events when requested by their organizer or a moderator.
 - Create a movie night from natural language with a required date/time and location, plus optional movie, duration, and attendance limit. Movie nights are posted in the configured movie-night channel. If no movie is supplied, suggestion and voting controls are enabled.
+- Edit future bot-managed movie nights when requested by their organizer or a moderator.
 - List and summarize all upcoming Discord Scheduled Events in the current server, including events created manually or by other bots.
 - List upcoming Discord events where the requesting user is Interested or RSVP'd Going, and include bot-managed Maybe responses when requested.
 - Summarize Discord Interested counts and, for bot-created events, Going/Maybe/Can't-go responses, attendance limits, and remaining capacity.

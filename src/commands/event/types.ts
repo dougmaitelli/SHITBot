@@ -9,6 +9,9 @@ export interface CommunityEvent {
   creatorId: string;
   name: string;
   startsAt: number;
+  durationMinutes?: number;
+  endsAt?: number;
+  fullDay?: boolean;
   description?: string;
   link?: string;
   attendanceLimit?: number;

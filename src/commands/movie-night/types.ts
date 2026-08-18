@@ -24,6 +24,7 @@ export interface MovieNight {
   scheduledEventId?: string;
   creatorId: string;
   startsAt: number;
+  durationMinutes?: number;
   location: string;
   movie: string | null;
   votingOpen: boolean;

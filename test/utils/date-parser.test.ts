@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseDate } from "../../src/utils/date-parser.js";
+import { addZonedDays, parseDate, parseDateOnly } from "../../src/utils/date-parser.js";
 
 const referenceDate = new Date("2026-08-05T12:00:00.000Z");
 const losAngeles = "America/Los_Angeles";
@@ -40,5 +40,18 @@ describe("parseDate", () => {
 
   it("rejects an invalid configured timezone", () => {
     assert.throws(() => parse("2 october 7pm", "Somewhere/Invalid"), RangeError);
+  });
+
+  it("parses date-only values at local midnight for all-day events", () => {
+    assert.equal(
+      new Date(parseDateOnly("August 15, 2026", losAngeles, referenceDate)! * 1000).toISOString(),
+      "2026-08-15T07:00:00.000Z",
+    );
+  });
+
+  it("adds calendar days across daylight-saving changes", () => {
+    const start = parseDateOnly("October 31, 2026", losAngeles, referenceDate)!;
+
+    assert.equal(new Date(addZonedDays(start, losAngeles, 2) * 1000).toISOString(), "2026-11-02T08:00:00.000Z");
   });
 });

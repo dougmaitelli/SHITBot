@@ -46,4 +46,18 @@ describe("renderEvent", () => {
     assert.ok(rendered.components[0]?.components.every((button) => button.toJSON().disabled));
     assert.equal(rendered.embeds[0].toJSON().footer?.text, "This event is closed");
   });
+
+  it("renders all-day events as dates without time or relative-time output", () => {
+    const event = communityEvent();
+
+    event.startsAt = 1_787_292_000;
+    event.endsAt = 1_787_378_400;
+    event.fullDay = true;
+    const when = renderEvent(event)
+      .embeds[0].toJSON()
+      .fields?.find((field) => field.name === "When")?.value;
+
+    assert.equal(when, "<t:1787292000:D> – <t:1787378399:D> (all day)");
+    assert.doesNotMatch(when ?? "", /:[FRTtfd]>/);
+  });
 });

@@ -27,13 +27,14 @@ describe("command schema", () => {
               minValue: 1,
               maxValue: 100,
             },
+            { type: "boolean", name: "full-day", description: "All-day event" },
           ],
         },
       ],
     });
 
     assert.equal(command.options?.[0]?.type, ApplicationCommandOptionType.Subcommand);
-    const [name, limit] = command.options?.[0]?.options ?? [];
+    const [name, limit, fullDay] = command.options?.[0]?.options ?? [];
 
     assert.equal(name?.type, ApplicationCommandOptionType.String);
     assert.equal(name?.name, "name");
@@ -45,5 +46,7 @@ describe("command schema", () => {
     assert.equal(limit?.required, false);
     assert.equal("min_value" in (limit ?? {}) ? limit.min_value : undefined, 1);
     assert.equal("max_value" in (limit ?? {}) ? limit.max_value : undefined, 100);
+    assert.equal(fullDay?.type, ApplicationCommandOptionType.Boolean);
+    assert.equal(fullDay?.name, "full-day");
   });
 });

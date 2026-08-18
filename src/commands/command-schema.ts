@@ -18,7 +18,11 @@ interface IntegerOptionSchema extends BaseOptionSchema {
   maxValue?: number;
 }
 
-type CommandOptionSchema = StringOptionSchema | IntegerOptionSchema;
+interface BooleanOptionSchema extends BaseOptionSchema {
+  type: "boolean";
+}
+
+type CommandOptionSchema = StringOptionSchema | IntegerOptionSchema | BooleanOptionSchema;
 
 interface SubcommandSchema {
   name: string;
@@ -53,7 +57,7 @@ export function buildCommand(schema: CommandSchema): RESTPostAPIChatInputApplica
 
             return option;
           });
-        } else {
+        } else if (optionSchema.type === "integer") {
           subcommand.addIntegerOption((option) => {
             option
               .setName(optionSchema.name)
@@ -66,6 +70,13 @@ export function buildCommand(schema: CommandSchema): RESTPostAPIChatInputApplica
 
             return option;
           });
+        } else {
+          subcommand.addBooleanOption((option) =>
+            option
+              .setName(optionSchema.name)
+              .setDescription(optionSchema.description)
+              .setRequired(optionSchema.required ?? false),
+          );
         }
       }
 

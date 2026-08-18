@@ -95,3 +95,49 @@ export function parseDate(input: string, timeZone: string, now = new Date()): nu
 
   return Math.floor(date.getTime() / 1000);
 }
+
+export function parseDateOnly(input: string, timeZone: string, now = new Date()): number | null {
+  const currentOffsetMinutes = timeZoneOffsetMilliseconds(timeZone, now) / 60_000;
+  const result = chrono.parse(input.trim(), { instant: now, timezone: currentOffsetMinutes }, { forwardDate: true })[0];
+
+  if (!result || !result.start.isCertain("month") || !result.start.isCertain("day")) return null;
+
+  return Math.floor(
+    zonedDateTimeToDate(
+      {
+        year: result.start.get("year")!,
+        month: result.start.get("month")!,
+        day: result.start.get("day")!,
+        hour: 0,
+        minute: 0,
+        second: 0,
+      },
+      timeZone,
+    ).getTime() / 1000,
+  );
+}
+
+export function addZonedDays(timestamp: number, timeZone: string, days: number): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date(timestamp * 1000));
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
+  const date = new Date(Date.UTC(value("year"), value("month") - 1, value("day") + days));
+
+  return Math.floor(
+    zonedDateTimeToDate(
+      {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+        hour: 0,
+        minute: 0,
+        second: 0,
+      },
+      timeZone,
+    ).getTime() / 1000,
+  );
+}

@@ -77,7 +77,9 @@ Times without an explicit offset use the `TZ` setting from `.env`. Inputs with a
 
 If `movie` is omitted, suggestion and voting controls appear automatically. The organizer, a moderator, or an admin can close voting with **Define movie**.
 
-Use `/event create` in any server channel for a non-movie event. `name` and `when` are required; `description`, `link`, `duration`, and `attendance-limit` are optional. Like movie nights, the bot creates a Discord scheduled event, provides RSVP buttons, and disables RSVPs once the start time passes.
+Use `/event create` in any server channel for a non-movie event. `name` and `when` are required; `ends`, `full-day`, `description`, `link`, `duration`, and `attendance-limit` are optional. Use either `ends` or `duration`. All-day events are displayed without times and use local-midnight boundaries only when syncing to Discord. Like movie nights, the bot creates a Discord scheduled event, provides RSVP buttons, and disables RSVPs once the start time passes.
+
+Organizers and moderators can update future managed items with `/event edit` and `/movie-night edit`. The mention assistant exposes matching `edit_event` and `edit_movie_night` tools. Unspecified fields are preserved, and changes are synchronized to the Discord scheduled event and bot messages.
 
 Use `/event import` with an existing Discord scheduled-event ID or copied event link to convert it into a bot-managed event without creating a duplicate Discord event. The command creates the RSVP post in the current channel and supports an optional attendance limit. Only the Discord event creator or someone with **Manage Events** can import it.
 

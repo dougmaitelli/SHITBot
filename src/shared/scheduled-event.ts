@@ -11,6 +11,7 @@ interface ScheduledEventDetails {
   location: string;
   startsAt: number;
   durationMinutes: number;
+  endsAt?: number;
 }
 
 export async function createExternalScheduledEvent(guild: Guild, details: ScheduledEventDetails): Promise<string> {
@@ -19,7 +20,7 @@ export async function createExternalScheduledEvent(guild: Guild, details: Schedu
     name: details.name.slice(0, 100),
     description: details.description.slice(0, 1000),
     scheduledStartTime: startTime,
-    scheduledEndTime: startTime + details.durationMinutes * 60_000,
+    scheduledEndTime: details.endsAt ? details.endsAt * 1000 : startTime + details.durationMinutes * 60_000,
     privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
     entityType: GuildScheduledEventEntityType.External,
     entityMetadata: { location: details.location.slice(0, 100) },
@@ -38,6 +39,25 @@ export async function renameScheduledEvent(
   const guild = await client.guilds.fetch(reference.guildId);
 
   await guild.scheduledEvents.edit(reference.scheduledEventId, { name: name.slice(0, 100) });
+}
+
+export async function editExternalScheduledEvent(
+  client: Client,
+  reference: ScheduledEventReference,
+  details: ScheduledEventDetails,
+): Promise<void> {
+  if (!reference.scheduledEventId) return;
+
+  const guild = await client.guilds.fetch(reference.guildId);
+  const startTime = details.startsAt * 1000;
+
+  await guild.scheduledEvents.edit(reference.scheduledEventId, {
+    name: details.name.slice(0, 100),
+    description: details.description.slice(0, 1000),
+    scheduledStartTime: startTime,
+    scheduledEndTime: details.endsAt ? details.endsAt * 1000 : startTime + details.durationMinutes * 60_000,
+    entityMetadata: { location: details.location.slice(0, 100) },
+  });
 }
 
 export async function deleteScheduledEvent(client: Client, reference: ScheduledEventReference): Promise<void> {

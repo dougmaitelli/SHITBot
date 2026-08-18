@@ -15,6 +15,8 @@ export interface CreateCommunityEventInput {
   link?: string;
   attendanceLimit?: number;
   durationMinutes: number;
+  endsAt?: number;
+  fullDay?: boolean;
 }
 
 export interface AdoptCommunityEventInput {
@@ -80,6 +82,9 @@ export async function createCommunityEvent(
     creatorId: input.creatorId,
     name: input.name,
     startsAt: input.startsAt,
+    durationMinutes: input.durationMinutes,
+    endsAt: input.endsAt,
+    fullDay: input.fullDay,
     description: input.description,
     link: input.link,
     attendanceLimit: input.attendanceLimit,
@@ -120,6 +125,11 @@ export async function adoptCommunityEvent(
     creatorId: input.creatorId,
     name: scheduledEvent.name,
     startsAt: Math.floor(scheduledEvent.scheduledStartTimestamp / 1000),
+    durationMinutes:
+      scheduledEvent.scheduledEndTimestamp && scheduledEvent.scheduledStartTimestamp
+        ? Math.round((scheduledEvent.scheduledEndTimestamp - scheduledEvent.scheduledStartTimestamp) / 60_000)
+        : 180,
+    endsAt: scheduledEvent.scheduledEndTimestamp ? Math.floor(scheduledEvent.scheduledEndTimestamp / 1000) : undefined,
     description: scheduledEvent.description ?? undefined,
     attendanceLimit: input.attendanceLimit,
     rsvps: {},

@@ -33,6 +33,7 @@ export async function createMovieNight(
     messageId: "",
     creatorId: input.creatorId,
     startsAt: input.startsAt,
+    durationMinutes: input.durationMinutes,
     location: input.location,
     movie: input.movie,
     votingOpen: input.movie === null,

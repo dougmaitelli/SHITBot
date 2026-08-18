@@ -20,6 +20,7 @@ describe("domain assistant-tool registration", () => {
       eventTools.map((tool) => tool.name),
       [
         "create_event",
+        "edit_event",
         "list_upcoming_events",
         "list_my_upcoming_events",
         "get_event_attendance",
@@ -30,6 +31,7 @@ describe("domain assistant-tool registration", () => {
       movieTools.map((tool) => tool.name),
       [
         "create_movie_night",
+        "edit_movie_night",
         "search_movie_suggestions",
         "summarize_movie_night_suggestions",
         "list_upcoming_movie_nights",
