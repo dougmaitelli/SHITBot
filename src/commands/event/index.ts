@@ -8,7 +8,7 @@ import {
 import { isOrganizerOrModerator } from "../../authorization.js";
 import { logger } from "../../logger.js";
 import { setRsvp, type RsvpStatus } from "../../shared/rsvp.js";
-import { addZonedDays, parseDate, parseDateOnly } from "../../utils/date-parser.js";
+import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../utils/date-parser.js";
 import { buildCommand } from "../command-schema.js";
 import { registerEventAssistantTools } from "./assistant-tools.js";
 import {
@@ -101,7 +101,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
 
     const endsAt =
       (endsInput
-        ? (fullDay ? parseDateOnly : parseDate)(endsInput, config.timeZone)
+        ? parseEventEnd(endsInput, config.timeZone, startsAt, fullDay)
         : fullDay
           ? addZonedDays(startsAt, config.timeZone, 1)
           : undefined) ?? undefined;
@@ -336,7 +336,7 @@ const createEventCommand: CommandFactory = ({ client, store, config, assistantTo
 
     const previousDuration = event.endsAt ? event.endsAt - event.startsAt : (event.durationMinutes ?? 180) * 60;
     const endsAt = endsInput
-      ? (fullDay ? parseDateOnly : parseDate)(endsInput, config.timeZone)
+      ? parseEventEnd(endsInput, config.timeZone, startsAt, fullDay)
       : durationInput !== null
         ? startsAt + durationInput * 60
         : whenInput !== null

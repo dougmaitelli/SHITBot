@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addZonedDays, parseDate, parseDateOnly } from "../../src/utils/date-parser.js";
+import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../src/utils/date-parser.js";
 
 const referenceDate = new Date("2026-08-05T12:00:00.000Z");
 const losAngeles = "America/Los_Angeles";
@@ -53,5 +53,14 @@ describe("parseDate", () => {
     const start = parseDateOnly("October 31, 2026", losAngeles, referenceDate)!;
 
     assert.equal(new Date(addZonedDays(start, losAngeles, 2) * 1000).toISOString(), "2026-11-02T08:00:00.000Z");
+  });
+
+  it("parses a time-only event end on the event's date", () => {
+    const startsAt = parseDate("August 28, 2026 9am", losAngeles, referenceDate)!;
+
+    assert.equal(
+      new Date(parseEventEnd("5pm", losAngeles, startsAt, false)! * 1000).toISOString(),
+      "2026-08-29T00:00:00.000Z",
+    );
   });
 });

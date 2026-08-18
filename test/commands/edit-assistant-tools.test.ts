@@ -58,6 +58,52 @@ describe("assistant edit tools", () => {
     assert.equal(messageEdited, true);
   });
 
+  it("anchors a time-only end to the exact event selected by ID", async () => {
+    const saved = store();
+    const startsAt = Date.parse("2100-09-01T09:00:00Z") / 1000;
+
+    await saved.load();
+    await saved.setEvent({
+      id: "pax1",
+      guildId: "guild",
+      channelId: "channel",
+      messageId: "message",
+      scheduledEventId: "scheduled",
+      creatorId: "organizer",
+      name: "PAX West day 1",
+      startsAt,
+      durationMinutes: 180,
+      rsvps: {},
+      createdAt: Date.now(),
+    });
+    let scheduledEdit: Record<string, unknown> | undefined;
+    const guild = {
+      id: "guild",
+      scheduledEvents: { edit: async (_id: string, options: Record<string, unknown>) => (scheduledEdit = options) },
+    } as unknown as Guild;
+    const channel = {
+      isTextBased: () => true,
+      isDMBased: () => false,
+      messages: { fetch: async () => ({ edit: async () => undefined }) },
+    };
+    const client = {
+      guilds: { fetch: async () => guild },
+      channels: { fetch: async () => channel },
+    } as unknown as Client;
+    const tools: AssistantTool[] = [];
+
+    registerEventAssistantTools(client, saved, tools, "UTC", "movie-nights");
+
+    await tools
+      .find((tool) => tool.name === "edit_event")!
+      .execute({ guild, channelId: "channel", userId: "organizer" }, { event_id: "event:pax1", ends: "5pm" });
+
+    const expectedEnd = Date.parse("2100-09-01T17:00:00Z") / 1000;
+
+    assert.equal(saved.getEvent("pax1")?.endsAt, expectedEnd);
+    assert.equal(scheduledEdit?.scheduledEndTime, expectedEnd * 1000);
+  });
+
   it("edits a managed movie night in Discord, storage, and its message", async () => {
     const saved = store();
 

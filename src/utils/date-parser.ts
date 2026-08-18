@@ -117,6 +117,27 @@ export function parseDateOnly(input: string, timeZone: string, now = new Date())
   );
 }
 
+export function parseEventEnd(input: string, timeZone: string, startsAt: number, fullDay: boolean): number | null {
+  const eventDate = new Date(startsAt * 1000);
+
+  if (fullDay) return parseDateOnly(input, timeZone, eventDate);
+
+  const parsed = parseDate(input, timeZone, eventDate);
+
+  if (parsed !== null) return parsed;
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(eventDate);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  const eventDay = `${value("year")}-${value("month")}-${value("day")}`;
+
+  return parseDate(`${eventDay} ${input}`, timeZone, eventDate);
+}
+
 export function addZonedDays(timestamp: number, timeZone: string, days: number): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,

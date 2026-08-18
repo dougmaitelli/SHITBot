@@ -3,7 +3,7 @@ import { attendance, upcomingItems, type UpcomingItem } from "../../assistant/ev
 import { createReminder, parseReminderArguments } from "../../assistant/reminder-tool.js";
 import { itemSummary, objectArguments, requestedLimit } from "../../assistant/tool-utils.js";
 import { isOrganizerOrModerator } from "../../authorization.js";
-import { addZonedDays, parseDate, parseDateOnly } from "../../utils/date-parser.js";
+import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../utils/date-parser.js";
 import { isMovieNightChannel } from "../movie-night/channel-policy.js";
 import { createCommunityEvent, parseEventLink } from "./create-event.js";
 import { renderEvent } from "./event-render.js";
@@ -171,7 +171,7 @@ export function registerEventAssistantTools(
 
       const endsAt =
         (input.ends
-          ? (input.full_day ? parseDateOnly : parseDate)(input.ends, timeZone)
+          ? parseEventEnd(input.ends, timeZone, startsAt, input.full_day ?? false)
           : input.full_day
             ? addZonedDays(startsAt, timeZone, 1)
             : undefined) ?? undefined;
@@ -223,7 +223,8 @@ export function registerEventAssistantTools(
 
   tools.push({
     name: "edit_event",
-    description: "Edit a future bot-managed non-movie event. Only the organizer or a moderator may edit it.",
+    description:
+      "Edit exactly one future bot-managed non-movie event by its stable ID. If the user identifies one or more events by name instead of ID, call list_upcoming_events first, select only the exact intended managed event IDs from those results, and call edit_event once per ID. Only the organizer or a moderator may edit it.",
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -319,7 +320,7 @@ export function registerEventAssistantTools(
       const previousDuration = event.endsAt ? event.endsAt - event.startsAt : (event.durationMinutes ?? 180) * 60;
       const endsAt =
         input.ends !== undefined
-          ? (fullDay ? parseDateOnly : parseDate)(input.ends, timeZone)
+          ? parseEventEnd(input.ends, timeZone, startsAt, fullDay)
           : input.duration_minutes !== undefined
             ? startsAt + (input.duration_minutes as number) * 60
             : input.when !== undefined

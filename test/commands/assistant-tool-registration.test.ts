@@ -41,5 +41,13 @@ describe("domain assistant-tool registration", () => {
       ],
     );
     assert.ok(eventTools.every((tool) => !tool.name.includes("movie")));
+
+    const editParameters = eventTools.find((tool) => tool.name === "edit_event")!.parameters as {
+      required?: string[];
+      properties?: Record<string, unknown>;
+    };
+
+    assert.deepEqual(editParameters.required, ["event_id"]);
+    assert.equal(editParameters.properties?.name_query, undefined);
   });
 });
