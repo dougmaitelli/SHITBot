@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { adoptCommunityEvent, parseScheduledEventReference } from "../../../src/commands/event/create-event.js";
-import { BotStore } from "../../../src/store.js";
+import { adoptCommunityEvent, parseScheduledEventReference } from "../../../../src/commands/event/actions/import.js";
+import { BotStore } from "../../../../src/store.js";
 import type { GuildScheduledEvent } from "discord.js";
 
 describe("Discord event import", () => {
@@ -23,6 +23,7 @@ describe("Discord event import", () => {
     let rendered: unknown;
     const scheduledEvent = {
       id: "987654321098765432",
+      creatorId: "original-organizer",
       name: "Community Picnic",
       description: "Bring lunch",
       scheduledStartTimestamp: 2_000_000_000_000,
@@ -30,7 +31,7 @@ describe("Discord event import", () => {
 
     const event = await adoptCommunityEvent(
       store,
-      { guildId: "guild", channelId: "channel", creatorId: "organizer", attendanceLimit: 20 },
+      { guildId: "guild", channelId: "channel", importedById: "moderator", attendanceLimit: 20 },
       scheduledEvent,
       async (message) => {
         rendered = message;
@@ -41,6 +42,7 @@ describe("Discord event import", () => {
 
     assert.equal(event.scheduledEventId, scheduledEvent.id);
     assert.equal(event.messageId, "message");
+    assert.equal(event.creatorId, "original-organizer");
     assert.equal(event.name, "Community Picnic");
     assert.equal(event.description, "Bring lunch");
     assert.equal(event.attendanceLimit, 20);

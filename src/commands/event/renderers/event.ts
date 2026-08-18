@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, type APIEmbedField } from "discord.js";
-import { buildRsvpButtons, buildRsvpFields } from "../../shared/rsvp.js";
-import type { CommunityEvent } from "./types.js";
+import { buildRsvpButtons, buildRsvpFields } from "../../../shared/rsvp.js";
+import type { CommunityEvent } from "../types.js";
 
 function isClosed(event: CommunityEvent): boolean {
   return Boolean(event.closedAt) || event.startsAt <= Math.floor(Date.now() / 1000);

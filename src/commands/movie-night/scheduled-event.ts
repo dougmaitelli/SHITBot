@@ -2,7 +2,6 @@ import {
   createExternalScheduledEvent,
   deleteScheduledEvent as deleteSharedScheduledEvent,
   editExternalScheduledEvent,
-  renameScheduledEvent,
 } from "../../shared/scheduled-event.js";
 import type { MovieNight } from "./types.js";
 import type { Client, Guild } from "discord.js";
@@ -22,7 +21,7 @@ export async function createScheduledEvent(guild: Guild, night: MovieNight, dura
 }
 
 export async function updateScheduledEventMovie(client: Client, night: MovieNight): Promise<void> {
-  await renameScheduledEvent(client, night, eventName(night));
+  await editExternalScheduledEvent(client, night, { name: eventName(night) });
 }
 
 export async function updateScheduledEvent(client: Client, night: MovieNight): Promise<void> {

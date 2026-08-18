@@ -22,9 +22,9 @@ interface BooleanOptionSchema extends BaseOptionSchema {
   type: "boolean";
 }
 
-type CommandOptionSchema = StringOptionSchema | IntegerOptionSchema | BooleanOptionSchema;
+export type CommandOptionSchema = StringOptionSchema | IntegerOptionSchema | BooleanOptionSchema;
 
-interface SubcommandSchema {
+export interface SubcommandSchema {
   name: string;
   description: string;
   options?: CommandOptionSchema[];

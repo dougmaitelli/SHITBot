@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { renderNight } from "./night-render.js";
-import { createScheduledEvent, deleteScheduledEvent } from "./scheduled-event.js";
-import type { MovieNight } from "./types.js";
-import type { BotStore } from "../../store.js";
+import { renderNight } from "../renderers/night.js";
+import { createScheduledEvent, deleteScheduledEvent } from "../scheduled-event.js";
+import type { BotStore } from "../../../store.js";
+import type { MovieNight } from "../types.js";
 import type { Client, Guild } from "discord.js";
 
 export interface CreateMovieNightInput {

@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
-import { registerMovieNightAssistantTools } from "../../../src/commands/movie-night/assistant-tools.js";
-import { BotStore } from "../../../src/store.js";
-import type { AssistantTool } from "../../../src/assistant/types.js";
+import { createMovieNightAssistantTools } from "../../../../src/commands/movie-night/assistant-tools/index.js";
+import { BotStore } from "../../../../src/store.js";
 import type { Client, Guild } from "discord.js";
 
 function store(): BotStore {
@@ -12,9 +11,7 @@ function store(): BotStore {
 
 describe("movie-night assistant tools", () => {
   it("registers only the movie-night toolset", () => {
-    const tools: AssistantTool[] = [];
-
-    registerMovieNightAssistantTools({} as Client, store(), tools, "UTC", async () => undefined);
+    const tools = createMovieNightAssistantTools({} as Client, store(), "UTC", async () => undefined);
 
     assert.deepEqual(
       tools.map((tool) => tool.name),
@@ -68,9 +65,7 @@ describe("movie-night assistant tools", () => {
       guilds: { fetch: async () => guild },
       channels: { fetch: async () => channel },
     } as unknown as Client;
-    const tools: AssistantTool[] = [];
-
-    registerMovieNightAssistantTools(client, saved, tools, "UTC", async () => channel);
+    const tools = createMovieNightAssistantTools(client, saved, "UTC", async () => channel);
 
     const result = await tools
       .find((tool) => tool.name === "edit_movie_night")!

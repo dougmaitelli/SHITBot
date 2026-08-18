@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import { buildRsvpButtons, buildRsvpFields } from "../../shared/rsvp.js";
-import { buildSuggestionField } from "./suggestion-search-render.js";
-import type { MovieNight } from "./types.js";
+import { buildRsvpButtons, buildRsvpFields } from "../../../shared/rsvp.js";
+import { buildSuggestionField } from "./suggestion-search.js";
+import type { MovieNight } from "../types.js";
 
 function isClosed(night: MovieNight): boolean {
   return Boolean(night.closedAt) || night.startsAt <= Math.floor(Date.now() / 1000);

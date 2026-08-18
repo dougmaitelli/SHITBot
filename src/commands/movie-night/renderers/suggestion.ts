@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
-import type { MovieNight, MovieSuggestion } from "./types.js";
+import type { MovieNight, MovieSuggestion } from "../types.js";
 
 function isClosed(night: MovieNight): boolean {
   return Boolean(night.closedAt) || night.startsAt <= Math.floor(Date.now() / 1000);

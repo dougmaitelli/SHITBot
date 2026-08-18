@@ -2,9 +2,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
 import { GuildScheduledEventStatus, type Client, type Guild, type GuildScheduledEvent } from "discord.js";
-import { registerEventAssistantTools } from "../../../src/commands/event/assistant-tools.js";
-import { BotStore } from "../../../src/store.js";
-import type { AssistantTool } from "../../../src/assistant/types.js";
+import { createEventAssistantTools } from "../../../../src/commands/event/assistant-tools/index.js";
+import { BotStore } from "../../../../src/store.js";
 
 function store(): BotStore {
   return new BotStore(`/tmp/shitbot-event-assistant-tools-${randomUUID()}.json`);
@@ -12,9 +11,7 @@ function store(): BotStore {
 
 describe("Discord scheduled-event assistant tools", () => {
   it("registers only event tools and keeps editing constrained to an ID", () => {
-    const tools: AssistantTool[] = [];
-
-    registerEventAssistantTools({} as Client, store(), tools, "UTC", "movie-nights");
+    const tools = createEventAssistantTools({} as Client, store(), "UTC", "movie-nights");
 
     assert.deepEqual(
       tools.map((tool) => tool.name),
@@ -62,12 +59,9 @@ describe("Discord scheduled-event assistant tools", () => {
         fetch: async () => ({ isTextBased: () => true, isDMBased: () => false, name: "general" }),
       },
     } as unknown as Client;
-    const tools: AssistantTool[] = [];
-
-    registerEventAssistantTools(
+    const tools = createEventAssistantTools(
       client,
       new BotStore("/tmp/moviebot-discord-events-test.json"),
-      tools,
       "UTC",
       "movie-nights",
     );
@@ -110,12 +104,14 @@ describe("Discord scheduled-event assistant tools", () => {
     } as unknown as Guild;
     const channel = {
       isTextBased: () => true,
+      isDMBased: () => false,
       messages: { fetch: async () => ({ edit: async () => (messageEdited = true) }) },
     };
-    const client = { guilds: { fetch: async () => guild } } as unknown as Client;
-    const tools: AssistantTool[] = [];
-
-    registerEventAssistantTools(client, saved, tools, "UTC", "movie-nights");
+    const client = {
+      guilds: { fetch: async () => guild },
+      channels: { fetch: async () => channel },
+    } as unknown as Client;
+    const tools = createEventAssistantTools(client, saved, "UTC", "movie-nights");
 
     const result = await tools
       .find((tool) => tool.name === "edit_event")!
@@ -153,12 +149,14 @@ describe("Discord scheduled-event assistant tools", () => {
     } as unknown as Guild;
     const channel = {
       isTextBased: () => true,
+      isDMBased: () => false,
       messages: { fetch: async () => ({ edit: async () => undefined }) },
     };
-    const client = { guilds: { fetch: async () => guild } } as unknown as Client;
-    const tools: AssistantTool[] = [];
-
-    registerEventAssistantTools(client, saved, tools, "UTC", "movie-nights");
+    const client = {
+      guilds: { fetch: async () => guild },
+      channels: { fetch: async () => channel },
+    } as unknown as Client;
+    const tools = createEventAssistantTools(client, saved, "UTC", "movie-nights");
 
     await tools
       .find((tool) => tool.name === "edit_event")!

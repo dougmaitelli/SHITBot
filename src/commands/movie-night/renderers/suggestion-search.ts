@@ -1,4 +1,4 @@
-import type { MovieNight, MovieSuggestion } from "./types.js";
+import type { MovieNight, MovieSuggestion } from "../types.js";
 import type { APIEmbedField } from "discord.js";
 
 const attribution =

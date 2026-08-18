@@ -14,16 +14,18 @@ export type GuildCommandInteraction = ChatInputCommandInteraction<"cached"> & {
   channelId: string;
 };
 
+export interface CommandConfig {
+  timeZone: string;
+  movieNightsChannel: string;
+  tmdbApiToken: string;
+  roles: RoleConfig;
+}
+
 export interface CommandContext {
   client: Client;
   store: BotStore;
-  assistantTools: AssistantTool[];
-  config: {
-    timeZone: string;
-    movieNightsChannel: string;
-    tmdbApiToken: string;
-    roles: RoleConfig;
-  };
+  config: CommandConfig;
+  registerAssistantTools(...tools: AssistantTool[]): void;
 }
 
 export interface CommandModule {
