@@ -100,6 +100,11 @@ export class OpenAICompatibleClient {
 
         messages.push({ role: "tool", tool_call_id: call.id, content: boundedResult });
       }
+
+      messages.push({
+        role: "system",
+        content: `Continue working on the user's original request using the tool results. The tools still available are: ${availableTools.map((tool) => tool.name).join(", ")}. If the request requires an action after a lookup, call the appropriate action tool now. Do not stop after the lookup or claim an advertised tool is unavailable.`,
+      });
     }
 
     const final = await this.complete(messages, []);

@@ -108,9 +108,100 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(await client().respond("Create a party", context, [tool], "System"), "Done");
     assert.deepEqual(received, { name: "Party" });
     const finalMessages = requests[1]?.messages as Array<{ role: string; content: string }>;
+    const toolResult = finalMessages.filter((message) => message.role === "tool").at(-1);
 
-    assert.equal(finalMessages.at(-1)?.role, "tool");
-    assert.equal(finalMessages.at(-1)?.content, "Created Party");
+    assert.equal(toolResult?.content, "Created Party");
+    assert.equal(finalMessages.at(-1)?.role, "system");
+  });
+
+  it("keeps edit tools available after listing IDs", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+
+    globalThis.fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+
+      requests.push(body);
+
+      if (requests.length === 1) {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "list-call",
+                      type: "function",
+                      function: { name: "list_upcoming_events", arguments: '{"limit":25}' },
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+        );
+      }
+
+      if (requests.length === 2) {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: ["one", "two", "three", "four"].map((id) => ({
+                    id: `edit-${id}`,
+                    type: "function",
+                    function: { name: "edit_event", arguments: `{"event_id":"event:${id}","ends":"5pm"}` },
+                  })),
+                },
+              },
+            ],
+          }),
+        );
+      }
+
+      return new Response(JSON.stringify({ choices: [{ message: { content: "Updated all four events." } }] }));
+    };
+    const edited: string[] = [];
+    const tools: AssistantTool[] = [
+      {
+        name: "list_upcoming_events",
+        description: "List events",
+        parameters: { type: "object" },
+        async execute() {
+          return JSON.stringify({ events: ["one", "two", "three", "four"].map((id) => ({ id: `event:${id}` })) });
+        },
+      },
+      {
+        name: "edit_event",
+        description: "Edit one event by ID",
+        parameters: { type: "object" },
+        async execute(_context, value) {
+          edited.push((value as { event_id: string }).event_id);
+
+          return "Updated";
+        },
+      },
+    ];
+
+    assert.equal(
+      await client().respond("Edit the four events", context, tools, "List IDs, then edit each event."),
+      "Updated all four events.",
+    );
+    assert.deepEqual(edited, ["event:one", "event:two", "event:three", "event:four"]);
+
+    const secondTools = requests[1]?.tools as Array<{ function: { name: string } }>;
+    const secondMessages = requests[1]?.messages as Array<{ role: string; content: string }>;
+
+    assert.deepEqual(
+      secondTools.map((tool) => tool.function.name),
+      ["list_upcoming_events", "edit_event"],
+    );
+    assert.equal(secondMessages.at(-1)?.role, "system");
+    assert.match(secondMessages.at(-1)?.content ?? "", /tools still available are:.*edit_event/i);
+    assert.match(secondMessages.at(-1)?.content ?? "", /Do not stop after the lookup/i);
   });
 
   it("stops advertising tools after twenty tool calls", async () => {
