@@ -151,6 +151,7 @@ export class OpenAICompatibleClient {
         body: JSON.stringify({
           model: this.config.model,
           messages,
+          cache_prompt: false,
           max_tokens: this.config.maxOutputTokens,
           ...(tools.length && {
             tools: tools.map((tool) => ({
