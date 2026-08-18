@@ -2,7 +2,7 @@ import { logger } from "../logger.js";
 import type { AssistantTool, AssistantToolContext } from "./types.js";
 
 const MAX_TOOL_RESULT_CHARACTERS = 16_000;
-const MAX_TOOL_CALLS = 3;
+const MAX_TOOL_CALLS = 20;
 const toolProtocolPattern =
   /(?:"(?:arguments|tool_calls?|function)"\s*:|<\/?(?:tool_call|function_call)>|\[(?:TOOL|FUNCTION)_CALLS?\])/i;
 
