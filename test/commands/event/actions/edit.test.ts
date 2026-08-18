@@ -40,6 +40,7 @@ describe("editCommunityEvent", () => {
       async update(updated) {
         renderedName = updated.name;
       },
+      async reconcilePin() {},
     };
 
     const updated = await editCommunityEvent(client, store, messages, event, { name: "New name" });

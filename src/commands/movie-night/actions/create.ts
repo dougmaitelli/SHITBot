@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { renderNight } from "../renderers/night.js";
 import { createScheduledEvent, deleteScheduledEvent } from "../scheduled-event.js";
+import type { ManagedMessage } from "../../../shared/managed-message.js";
 import type { BotStore } from "../../../store.js";
 import type { MovieNight } from "../types.js";
 import type { Client, Guild } from "discord.js";
@@ -16,9 +17,7 @@ export interface CreateMovieNightInput {
   durationMinutes: number;
 }
 
-type SendNightMessage = (
-  options: ReturnType<typeof renderNight>,
-) => Promise<{ id: string; delete(): Promise<unknown> }>;
+type SendNightMessage = (options: ReturnType<typeof renderNight>) => Promise<ManagedMessage>;
 
 export async function createMovieNight(
   client: Client,
@@ -49,6 +48,7 @@ export async function createMovieNight(
   try {
     message = await sendMessage(renderNight(night));
     night.messageId = message.id;
+    await message.pin();
     await store.set(night);
 
     return night;

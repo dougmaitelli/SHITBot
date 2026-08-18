@@ -109,7 +109,8 @@ export function createMovieNightHandler({ client, store, config }: CommandContex
       });
       await interaction.deleteReply().catch(() => undefined);
       await interaction.followUp({
-        content: "I couldn't create the movie night. Check my channel and **Create Events** permissions.",
+        content:
+          "I couldn't create the movie night. Check my channel, **Create Events**, and **Manage Messages** permissions.",
         flags: MessageFlags.Ephemeral,
       });
     }

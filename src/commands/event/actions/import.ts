@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { renderEvent } from "../renderers/event.js";
+import type { ManagedMessage } from "../../../shared/managed-message.js";
 import type { BotStore } from "../../../store.js";
 import type { CommunityEvent } from "../types.js";
 import type { GuildScheduledEvent } from "discord.js";
@@ -11,9 +12,7 @@ export interface AdoptCommunityEventInput {
   attendanceLimit?: number;
 }
 
-type SendEventMessage = (
-  options: ReturnType<typeof renderEvent>,
-) => Promise<{ id: string; delete(): Promise<unknown> }>;
+type SendEventMessage = (options: ReturnType<typeof renderEvent>) => Promise<ManagedMessage>;
 
 export function parseScheduledEventReference(value: string, guildId: string): string {
   const reference = value.trim();
@@ -74,6 +73,7 @@ export async function adoptCommunityEvent(
   try {
     message = await sendMessage(renderEvent(event));
     event.messageId = message.id;
+    await message.pin();
     await store.setEvent(event);
 
     return event;

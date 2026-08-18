@@ -104,7 +104,7 @@ export function importEventHandler({ store }: CommandContext) {
         userId: interaction.user.id,
       });
       await interaction.editReply(
-        "I couldn't import that Discord event. Check that it still exists and I can post in this channel.",
+        "I couldn't import that Discord event. Check that it still exists and I can post and pin messages in this channel.",
       );
     }
   };

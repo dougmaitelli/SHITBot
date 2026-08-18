@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { renderEvent } from "../renderers/event.js";
 import { createScheduledEvent, deleteScheduledEvent } from "../scheduled-event.js";
+import type { ManagedMessage } from "../../../shared/managed-message.js";
 import type { BotStore } from "../../../store.js";
 import type { CommunityEvent, EventSchedule } from "../types.js";
 import type { Client, Guild } from "discord.js";
@@ -16,9 +17,7 @@ export interface CreateCommunityEventInput {
   attendanceLimit?: number;
 }
 
-type SendEventMessage = (
-  options: ReturnType<typeof renderEvent>,
-) => Promise<{ id: string; delete(): Promise<unknown> }>;
+type SendEventMessage = (options: ReturnType<typeof renderEvent>) => Promise<ManagedMessage>;
 
 export function parseEventLink(value: string | undefined): string | undefined {
   const link = value?.trim() || undefined;
@@ -59,6 +58,7 @@ export async function createCommunityEvent(
   try {
     message = await sendMessage(renderEvent(event));
     event.messageId = message.id;
+    await message.pin();
     await store.setEvent(event);
 
     return event;

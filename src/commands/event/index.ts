@@ -35,7 +35,18 @@ const createEventCommand: CommandFactory = (context): CommandModule => {
     onStoreLoaded(): void {
       logger.info("Event module store loaded", { eventCount: store.listEvents().length });
     },
-    onReady(): void {
+    async onReady(): Promise<void> {
+      for (const event of store.listEvents()) {
+        await messages.reconcilePin(event).catch((error) =>
+          logger.warn("Could not reconcile event message pin", {
+            error,
+            eventId: event.id,
+            channelId: event.channelId,
+            messageId: event.messageId,
+          }),
+        );
+      }
+
       startExpirationJob(store, (event) => messages.update(event));
     },
   };

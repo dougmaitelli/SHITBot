@@ -1,5 +1,6 @@
 import { renderNight } from "./renderers/night.js";
 import { renderSuggestion } from "./renderers/suggestion.js";
+import { isMovieNightClosed } from "./status.js";
 import type { MovieNight, MovieSuggestion } from "./types.js";
 import type { Client } from "discord.js";
 
@@ -9,6 +10,7 @@ export interface MovieNightMessageService {
   updateSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<void>;
   updateSuggestions(night: MovieNight): Promise<void>;
   updateAll(night: MovieNight): Promise<void>;
+  reconcilePin(night: MovieNight): Promise<void>;
   deleteSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<void>;
   deleteSuggestions(night: MovieNight): Promise<void>;
 }
@@ -27,7 +29,7 @@ export function createMovieNightMessageService(client: Client): MovieNightMessag
 
     const message = await channel.messages.fetch(night.messageId);
 
-    await message.edit(renderNight(night));
+    await Promise.all([message.edit(renderNight(night)), ...(night.closedAt ? [message.unpin()] : [])]);
   }
 
   async function sendSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<string> {
@@ -69,6 +71,18 @@ export function createMovieNightMessageService(client: Client): MovieNightMessag
     await updateSuggestions(night);
   }
 
+  async function reconcilePin(night: MovieNight): Promise<void> {
+    const channel = await getChannel(night);
+
+    if (!channel) return;
+
+    const message = await channel.messages.fetch(night.messageId);
+
+    if (isMovieNightClosed(night)) {
+      if (message.pinned) await message.unpin();
+    } else if (!message.pinned) await message.pin();
+  }
+
   async function deleteSuggestions(night: MovieNight): Promise<void> {
     await Promise.allSettled(night.suggestions.map((suggestion) => deleteSuggestion(night, suggestion)));
   }
@@ -79,6 +93,7 @@ export function createMovieNightMessageService(client: Client): MovieNightMessag
     updateSuggestion,
     updateSuggestions,
     updateAll,
+    reconcilePin,
     deleteSuggestion,
     deleteSuggestions,
   };

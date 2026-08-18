@@ -36,7 +36,10 @@ describe("event edit subcommand", () => {
       },
     } as unknown as Guild;
     const client = { guilds: { fetch: async () => discordGuild } } as unknown as Client;
-    const messages: EventMessageService = { update: async () => undefined };
+    const messages: EventMessageService = {
+      update: async () => undefined,
+      reconcilePin: async () => undefined,
+    };
     const values: Record<string, string | null> = {
       "event-id": "event:event1",
       ends: "5pm",

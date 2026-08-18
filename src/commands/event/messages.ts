@@ -1,21 +1,38 @@
 import { renderEvent } from "./renderers/event.js";
+import { isEventClosed } from "./status.js";
 import type { CommunityEvent } from "./types.js";
 import type { Client } from "discord.js";
 
 export interface EventMessageService {
   update(event: CommunityEvent): Promise<void>;
+  reconcilePin(event: CommunityEvent): Promise<void>;
 }
 
 export function createEventMessageService(client: Client): EventMessageService {
+  async function getMessage(event: CommunityEvent) {
+    const channel = await client.channels.fetch(event.channelId);
+
+    if (!channel?.isTextBased() || channel.isDMBased()) return undefined;
+
+    return channel.messages.fetch(event.messageId);
+  }
+
   return {
     async update(event): Promise<void> {
-      const channel = await client.channels.fetch(event.channelId);
+      const message = await getMessage(event);
 
-      if (!channel?.isTextBased() || channel.isDMBased()) return;
+      if (!message) return;
 
-      const message = await channel.messages.fetch(event.messageId);
+      await Promise.all([message.edit(renderEvent(event)), ...(event.closedAt ? [message.unpin()] : [])]);
+    },
+    async reconcilePin(event): Promise<void> {
+      const message = await getMessage(event);
 
-      await message.edit(renderEvent(event));
+      if (!message) return;
+
+      if (isEventClosed(event)) {
+        if (message.pinned) await message.unpin();
+      } else if (!message.pinned) await message.pin();
     },
   };
 }

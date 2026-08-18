@@ -21,6 +21,7 @@ describe("Discord event import", () => {
   it("creates a managed record and post without replacing the Discord event", async () => {
     const store = new BotStore(`/tmp/moviebot-event-import-${process.pid}.json`);
     let rendered: unknown;
+    let pinned = false;
     const scheduledEvent = {
       id: "987654321098765432",
       creatorId: "original-organizer",
@@ -36,7 +37,13 @@ describe("Discord event import", () => {
       async (message) => {
         rendered = message;
 
-        return { id: "message", async delete() {} };
+        return {
+          id: "message",
+          async pin() {
+            pinned = true;
+          },
+          async delete() {},
+        };
       },
     );
 
@@ -49,5 +56,6 @@ describe("Discord event import", () => {
     assert.deepEqual(event.rsvps, {});
     assert.equal(store.getEvent(event.id)?.scheduledEventId, scheduledEvent.id);
     assert.ok(rendered);
+    assert.equal(pinned, true);
   });
 });

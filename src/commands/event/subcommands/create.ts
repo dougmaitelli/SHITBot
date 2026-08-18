@@ -118,7 +118,8 @@ export function createEventHandler({ client, store, config }: CommandContext) {
       });
       await interaction.deleteReply().catch(() => undefined);
       await interaction.followUp({
-        content: "I couldn't create the event. Check my channel and **Create Events** permissions.",
+        content:
+          "I couldn't create the event. Check my channel, **Create Events**, and **Manage Messages** permissions.",
         flags: MessageFlags.Ephemeral,
       });
     }

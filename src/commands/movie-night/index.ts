@@ -60,7 +60,18 @@ const createMovieNightCommand: CommandFactory = (context): CommandModule => {
     onStoreLoaded(): void {
       logger.info("Movie-night module store loaded", { movieNightCount: store.list().length });
     },
-    onReady(): void {
+    async onReady(): Promise<void> {
+      for (const night of store.list()) {
+        await messages.reconcilePin(night).catch((error) =>
+          logger.warn("Could not reconcile movie-night message pin", {
+            error,
+            nightId: night.id,
+            channelId: night.channelId,
+            messageId: night.messageId,
+          }),
+        );
+      }
+
       startExpirationJob(store, (night) => messages.updateAll(night));
     },
   };
