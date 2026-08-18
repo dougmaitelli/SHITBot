@@ -353,10 +353,9 @@ export function registerEventAssistantTools(
 
       await updateScheduledEvent(client, updated);
       await store.setEvent(updated);
-      const channel = await client.channels.fetch(updated.channelId);
+      const channel = await context.guild.channels.fetch(updated.channelId);
 
-      if (channel?.isTextBased() && !channel.isDMBased())
-        await (await channel.messages.fetch(updated.messageId)).edit(renderEvent(updated));
+      if (channel?.isTextBased()) await (await channel.messages.fetch(updated.messageId)).edit(renderEvent(updated));
 
       return `Updated **${updated.name}** for <t:${updated.startsAt}:F>.`;
     },

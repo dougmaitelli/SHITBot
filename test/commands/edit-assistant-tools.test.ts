@@ -34,16 +34,13 @@ describe("assistant edit tools", () => {
     const guild = {
       id: "guild",
       scheduledEvents: { edit: async (_id: string, options: Record<string, unknown>) => (scheduledEdit = options) },
+      channels: { fetch: async () => channel },
     } as unknown as Guild;
     const channel = {
       isTextBased: () => true,
-      isDMBased: () => false,
       messages: { fetch: async () => ({ edit: async () => (messageEdited = true) }) },
     };
-    const client = {
-      guilds: { fetch: async () => guild },
-      channels: { fetch: async () => channel },
-    } as unknown as Client;
+    const client = { guilds: { fetch: async () => guild } } as unknown as Client;
     const tools: AssistantTool[] = [];
 
     registerEventAssistantTools(client, saved, tools, "UTC", "movie-nights");
@@ -80,16 +77,13 @@ describe("assistant edit tools", () => {
     const guild = {
       id: "guild",
       scheduledEvents: { edit: async (_id: string, options: Record<string, unknown>) => (scheduledEdit = options) },
+      channels: { fetch: async () => channel },
     } as unknown as Guild;
     const channel = {
       isTextBased: () => true,
-      isDMBased: () => false,
       messages: { fetch: async () => ({ edit: async () => undefined }) },
     };
-    const client = {
-      guilds: { fetch: async () => guild },
-      channels: { fetch: async () => channel },
-    } as unknown as Client;
+    const client = { guilds: { fetch: async () => guild } } as unknown as Client;
     const tools: AssistantTool[] = [];
 
     registerEventAssistantTools(client, saved, tools, "UTC", "movie-nights");
