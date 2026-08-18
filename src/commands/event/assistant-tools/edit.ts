@@ -1,5 +1,6 @@
-import { objectArguments } from "../../../assistant/tool-utils.js";
+import { actionValidationFailure, objectArguments } from "../../../assistant/tool-utils.js";
 import { isOrganizerOrModerator } from "../../../authorization.js";
+import { logger } from "../../../logger.js";
 import { parseEventLink } from "../actions/create.js";
 import { editCommunityEvent } from "../actions/edit.js";
 import { editEventSchedule, formatEventSchedule, isEventEnded, scheduleEndsAt, scheduleStartsAt } from "../schedule.js";
@@ -26,13 +27,16 @@ export function createEventEditTool({
         name: { type: "string", description: "New event name, maximum 100 characters" },
         starts: {
           type: "string",
-          description: `New start date/time or first all-day date; defaults to ${timeZone} without an offset`,
+          description: `New start date/time or first all-day date. Pass the user's value unchanged; values without an offset use ${timeZone}, and a time by itself stays on the event's current date`,
         },
         description: { type: "string", description: "New details; empty text clears them" },
         link: { type: "string", description: "New http/https URL; empty text clears it" },
         duration_minutes: { type: "integer", minimum: 15, maximum: 10080 },
         attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
-        ends: { type: "string", description: "New end date/time or last inclusive all-day date" },
+        ends: {
+          type: "string",
+          description: `New end date/time or last inclusive all-day date. Pass the user's value unchanged; values without an offset use ${timeZone}, and a time by itself stays on the event's current date`,
+        },
         full_day: { type: "boolean", description: "Optional override; date-only starts are all-day automatically" },
       },
     },
@@ -100,23 +104,50 @@ export function createEventEditTool({
       )
         throw new Error("Attendance limit must be from 1 to 100000.");
 
-      const schedule = editEventSchedule(
-        event.schedule,
-        {
-          starts: input.starts,
-          ends: input.ends,
-          fullDay: input.full_day,
-          durationMinutes: input.duration_minutes as number | undefined,
-        },
-        timeZone,
-      );
+      let schedule;
+
+      try {
+        schedule = editEventSchedule(
+          event.schedule,
+          {
+            starts: input.starts,
+            ends: input.ends,
+            fullDay: input.full_day,
+            durationMinutes: input.duration_minutes as number | undefined,
+          },
+          timeZone,
+        );
+      } catch (error) {
+        logger.warn("Assistant event edit schedule validation failed", {
+          eventId: event.id,
+          timeZone,
+          eventStartsAt: scheduleStartsAt(event.schedule),
+          updatesStart: input.starts !== undefined,
+          updatesEnd: input.ends !== undefined,
+          error,
+        });
+
+        return actionValidationFailure({
+          resourceType: "event",
+          resourceId: input.event_id,
+          resourceName: event.name,
+          timeZone,
+          error,
+        });
+      }
       const now = Math.floor(Date.now() / 1000);
 
       if (
         scheduleEndsAt(schedule) <= now ||
         (input.starts !== undefined && schedule.type === "timed" && scheduleStartsAt(schedule) <= now)
       )
-        throw new Error("Provide an event schedule that has not ended.");
+        return actionValidationFailure({
+          resourceType: "event",
+          resourceId: input.event_id,
+          resourceName: event.name,
+          timeZone,
+          error: new Error("Provide an event schedule that has not ended."),
+        });
 
       let link = event.link;
 

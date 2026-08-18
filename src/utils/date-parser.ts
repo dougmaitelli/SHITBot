@@ -199,16 +199,31 @@ export function parseEventEnd(input: string, timeZone: string, startsAt: number,
 
   if (parsed !== null) return parsed;
 
+  return parseTimeOnDate(input, timeZone, startsAt);
+}
+
+export function parseTimeOnDate(input: string, timeZone: string, referenceAt: number): number | null {
+  const referenceDate = new Date(referenceAt * 1000);
+  const currentOffsetMinutes = timeZoneOffsetMilliseconds(timeZone, referenceDate) / 60_000;
+  const result = chrono.parse(
+    input.trim(),
+    { instant: referenceDate, timezone: currentOffsetMinutes },
+    { forwardDate: true },
+  )[0];
+
+  if (!result || !result.start.isCertain("hour") || result.start.isCertain("month") || result.start.isCertain("day"))
+    return null;
+
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(eventDate);
+  }).formatToParts(referenceDate);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
   const eventDay = `${value("year")}-${value("month")}-${value("day")}`;
 
-  return parseDate(`${eventDay} ${input}`, timeZone, eventDate);
+  return parseDate(`${eventDay} ${input}`, timeZone, referenceDate);
 }
 
 export function addZonedDays(timestamp: number, timeZone: string, days: number): number {

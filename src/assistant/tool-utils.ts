@@ -16,6 +16,25 @@ export function requestedLimit(value: unknown): number {
   return value as number;
 }
 
+export function actionValidationFailure(options: {
+  resourceType: "event" | "movie-night";
+  resourceId: string;
+  resourceName: string;
+  timeZone: string;
+  error: unknown;
+}): string {
+  return JSON.stringify({
+    success: false,
+    resource_found: true,
+    resource_type: options.resourceType,
+    resource_id: options.resourceId,
+    resource_name: options.resourceName,
+    configured_timezone: options.timeZone,
+    error: options.error instanceof Error ? options.error.message : String(options.error),
+    instruction: "Report this validation error exactly. Do not say the resource or ID was missing.",
+  });
+}
+
 export function itemSummary(item: UpcomingItem, userId?: string) {
   const counts = attendance(item);
   const discordTime = item.allDay

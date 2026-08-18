@@ -72,7 +72,10 @@ export function createEventCreationTool({ client, store, timeZone }: EventAssist
         link: { type: "string", description: "Optional http or https URL" },
         duration_minutes: { type: "integer", minimum: 15, maximum: 10080, description: "Defaults to 180" },
         attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
-        ends: { type: "string", description: "End date/time, or last inclusive all-day date" },
+        ends: {
+          type: "string",
+          description: `End date/time or last inclusive all-day date; values without an offset use ${timeZone}`,
+        },
         full_day: { type: "boolean", description: "Optional override; date-only starts are all-day automatically" },
       },
     },

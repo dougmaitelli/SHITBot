@@ -1,6 +1,7 @@
-import { objectArguments } from "../../../assistant/tool-utils.js";
+import { actionValidationFailure, objectArguments } from "../../../assistant/tool-utils.js";
 import { isOrganizerOrModerator } from "../../../authorization.js";
-import { parseDate } from "../../../utils/date-parser.js";
+import { logger } from "../../../logger.js";
+import { parseDate, parseTimeOnDate } from "../../../utils/date-parser.js";
 import { editMovieNight } from "../actions/edit.js";
 import type { MovieNightAssistantToolDependencies } from "./types.js";
 import type { AssistantTool } from "../../../assistant/types.js";
@@ -24,7 +25,10 @@ export function createMovieNightEditTool({
       required: ["movie_night_id"],
       properties: {
         movie_night_id: { type: "string", description: "Stable ID returned by list_upcoming_movie_nights" },
-        when: { type: "string", description: `New date and time; defaults to ${timeZone} without an offset` },
+        when: {
+          type: "string",
+          description: `New date and time. Pass the user's value unchanged; values without an offset use ${timeZone}, and a time by itself stays on the movie night's current date`,
+        },
         location: { type: "string", description: "New location, maximum 200 characters" },
         movie: { type: "string", description: "New movie; empty text clears it and reopens voting" },
         duration_minutes: { type: "integer", minimum: 30, maximum: 720 },
@@ -78,10 +82,29 @@ export function createMovieNightEditTool({
       )
         throw new Error("Attendance limit must be from 1 to 100000.");
 
-      const startsAt = input.when === undefined ? night.startsAt : parseDate(input.when, timeZone);
+      const startsAt =
+        input.when === undefined
+          ? night.startsAt
+          : (parseDate(input.when, timeZone) ?? parseTimeOnDate(input.when, timeZone, night.startsAt));
 
-      if (!startsAt || startsAt <= Math.floor(Date.now() / 1000))
-        throw new Error("Provide a valid future date and time.");
+      if (!startsAt || startsAt <= Math.floor(Date.now() / 1000)) {
+        const error = new Error("Provide a valid future date and time.");
+
+        logger.warn("Assistant movie-night edit start validation failed", {
+          nightId: night.id,
+          timeZone,
+          currentStartsAt: night.startsAt,
+          error,
+        });
+
+        return actionValidationFailure({
+          resourceType: "movie-night",
+          resourceId: input.movie_night_id,
+          resourceName: night.movie ? `Movie Night: ${night.movie}` : "Movie Night: Movie TBD",
+          timeZone,
+          error,
+        });
+      }
 
       const movie = input.movie === undefined ? night.movie : input.movie.trim() || null;
       const updated = await editMovieNight(client, store, messages, night, {

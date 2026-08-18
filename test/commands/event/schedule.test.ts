@@ -79,4 +79,29 @@ describe("event schedules", () => {
       endsAt: Date.parse("2026-09-04T19:00:00Z") / 1000,
     });
   });
+
+  it("reports the resolved times when an end is not after the start", () => {
+    const startsAt = Date.parse("2026-08-29T02:00:00Z") / 1000;
+    const requestedEnd = Date.parse("2026-08-29T00:00:00Z") / 1000;
+
+    assert.throws(
+      () => editEventSchedule({ type: "timed", startsAt, endsAt: startsAt + 180 * 60 }, { ends: "5pm" }, timeZone),
+      new RegExp(`<t:${requestedEnd}:F>.*America/Los_Angeles.*<t:${startsAt}:F>`),
+    );
+  });
+
+  it("anchors a time-only start edit to the event's current local date", () => {
+    const startsAt = Date.parse("2026-08-28T17:00:00Z") / 1000;
+    const schedule = editEventSchedule(
+      { type: "timed", startsAt, endsAt: startsAt + 180 * 60 },
+      { starts: "5pm" },
+      timeZone,
+    );
+
+    assert.deepEqual(schedule, {
+      type: "timed",
+      startsAt: Date.parse("2026-08-29T00:00:00Z") / 1000,
+      endsAt: Date.parse("2026-08-29T03:00:00Z") / 1000,
+    });
+  });
 });

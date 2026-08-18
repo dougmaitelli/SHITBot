@@ -40,6 +40,12 @@ describe("assistant tool-use instructions", () => {
     assert.match(TOOL_USE_INSTRUCTIONS, /never ask the user for IDs.*list tool can provide/i);
   });
 
+  it("preserves the actual cause of action failures", () => {
+    assert.match(TOOL_USE_INSTRUCTIONS, /date and time expressions.*unchanged/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /validation, authorization.*exact cause/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /Never reinterpret an action failure.*missing.*ID.*invalid/i);
+  });
+
   it("instructs the model to finish within the configured output limit", () => {
     const instruction = outputLengthInstruction(1600);
 

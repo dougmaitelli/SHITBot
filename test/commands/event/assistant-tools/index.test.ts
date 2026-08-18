@@ -33,6 +33,17 @@ describe("Discord scheduled-event assistant tools", () => {
 
     assert.deepEqual(editParameters.required, ["event_id"]);
     assert.equal(editParameters.properties?.name_query, undefined);
+    assert.match(
+      String((editParameters.properties?.starts as { description?: string })?.description),
+      /unchanged.*UTC/i,
+    );
+    assert.match(String((editParameters.properties?.ends as { description?: string })?.description), /unchanged.*UTC/i);
+
+    const createParameters = tools.find((tool) => tool.name === "create_event")!.parameters as {
+      properties?: Record<string, unknown>;
+    };
+
+    assert.match(String((createParameters.properties?.ends as { description?: string })?.description), /UTC/i);
   });
 
   it("lists scheduled events that were not created by the bot", async () => {
@@ -124,7 +135,7 @@ describe("Discord scheduled-event assistant tools", () => {
 
   it("anchors a time-only end to the configured timezone for the exact event selected by ID", async () => {
     const saved = store();
-    const startsAt = Date.parse("2100-09-01T16:00:00Z") / 1000;
+    const startsAt = Date.parse("2100-09-01T17:00:00Z") / 1000;
 
     await saved.load();
     await saved.setEvent({
@@ -164,5 +175,42 @@ describe("Discord scheduled-event assistant tools", () => {
 
     assert.deepEqual(saved.getEvent("pax1")?.schedule, { type: "timed", startsAt, endsAt: expectedEnd });
     assert.equal(scheduledEdit?.scheduledEndTime, expectedEnd * 1000);
+  });
+
+  it("reports a schedule conflict without claiming the managed event was missing", async () => {
+    const saved = store();
+    const startsAt = Date.parse("2100-09-02T02:00:00Z") / 1000;
+
+    await saved.load();
+    await saved.setEvent({
+      id: "pax2",
+      guildId: "guild",
+      channelId: "channel",
+      messageId: "message",
+      scheduledEventId: "scheduled",
+      creatorId: "organizer",
+      name: "PAX West 2026 - Day 2",
+      schedule: { type: "timed", startsAt, endsAt: startsAt + 180 * 60 },
+      rsvps: {},
+      createdAt: Date.now(),
+    });
+    const tools = createEventAssistantTools({} as Client, saved, "America/Los_Angeles", "movie-nights");
+    const edit = tools.find((tool) => tool.name === "edit_event")!;
+
+    const result = JSON.parse(
+      await edit.execute(
+        { guild: { id: "guild" } as Guild, channelId: "channel", userId: "organizer" },
+        { event_id: "event:pax2", ends: "5pm" },
+      ),
+    ) as Record<string, unknown>;
+
+    assert.equal(result.success, false);
+    assert.equal(result.resource_found, true);
+    assert.equal(result.resource_type, "event");
+    assert.equal(result.resource_id, "event:pax2");
+    assert.equal(result.resource_name, "PAX West 2026 - Day 2");
+    assert.equal(result.configured_timezone, "America/Los_Angeles");
+    assert.match(String(result.error), /requested end.*before or at the event start/i);
+    assert.match(String(result.instruction), /Do not say the resource or ID was missing/i);
   });
 });

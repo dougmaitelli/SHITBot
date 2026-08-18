@@ -6,6 +6,7 @@ import {
   parseCalendarDate,
   parseDate,
   parseEventEnd,
+  parseTimeOnDate,
   timestampToCalendarDate,
 } from "../../utils/date-parser.js";
 import type { CommunityEvent, EventSchedule } from "./types.js";
@@ -64,6 +65,15 @@ export function isEventEnded(event: CommunityEvent, now = Math.floor(Date.now() 
   return Boolean(event.closedAt) || eventEndsAt(event) <= now;
 }
 
+function validateTimedEnd(endsAt: number | null, startsAt: number, timeZone: string): asserts endsAt is number {
+  if (!endsAt) throw new Error("Provide a valid event end date and time.");
+
+  if (endsAt <= startsAt)
+    throw new Error(
+      `The requested end (<t:${endsAt}:F>) resolves in ${timeZone} before or at the event start (<t:${startsAt}:F>).`,
+    );
+}
+
 export function createEventSchedule(
   input: EventScheduleInput & { starts: string },
   timeZone: string,
@@ -98,7 +108,7 @@ export function createEventSchedule(
     ? parseEventEnd(input.ends, timeZone, startsAt, false)
     : startsAt + (input.durationMinutes ?? 180) * 60;
 
-  if (!endsAt || endsAt <= startsAt) throw new Error("The event end must be after its start.");
+  validateTimedEnd(endsAt, startsAt, timeZone);
 
   return { type: "timed", startsAt, endsAt };
 }
@@ -108,7 +118,10 @@ export function editEventSchedule(current: EventSchedule, input: EventScheduleIn
     throw new Error("Use either an end or a duration, not both.");
 
   const currentStartsAt = scheduleStartsAt(current);
-  const parsedStartsAt = input.starts ? parseDate(input.starts, timeZone, new Date(currentStartsAt * 1000)) : null;
+  const parsedStartsAt = input.starts
+    ? (parseDate(input.starts, timeZone, new Date(currentStartsAt * 1000)) ??
+      parseTimeOnDate(input.starts, timeZone, currentStartsAt))
+    : null;
   const fullDay = input.fullDay ?? (input.starts ? parsedStartsAt === null : current.type === "all-day");
 
   if (fullDay) {
@@ -161,7 +174,7 @@ export function editEventSchedule(current: EventSchedule, input: EventScheduleIn
       ? startsAt + input.durationMinutes * 60
       : startsAt + currentDuration;
 
-  if (!endsAt || endsAt <= startsAt) throw new Error("The event end must be after its start.");
+  validateTimedEnd(endsAt, startsAt, timeZone);
 
   return { type: "timed", startsAt, endsAt };
 }
