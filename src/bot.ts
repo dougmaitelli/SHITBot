@@ -178,7 +178,7 @@ async function registerCommands(config: BotConfig, commandModules: CommandModule
 }
 
 export async function startBot(config: BotConfig): Promise<void> {
-  const store = new BotStore(config.dataFile);
+  const store = new BotStore(config.dataFile, config.commands.timeZone);
   const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
   startHealthServer(client, config.healthPort);

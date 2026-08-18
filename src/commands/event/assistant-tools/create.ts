@@ -1,12 +1,12 @@
 import { objectArguments } from "../../../assistant/tool-utils.js";
-import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../../utils/date-parser.js";
 import { createCommunityEvent, parseEventLink } from "../actions/create.js";
+import { createEventSchedule, formatEventSchedule, scheduleEndsAt, scheduleStartsAt } from "../schedule.js";
 import type { EventAssistantToolDependencies } from "./types.js";
 import type { AssistantTool } from "../../../assistant/types.js";
 
 interface EventToolArguments {
   name: string;
-  when: string;
+  starts: string;
   description?: string;
   link?: string;
   duration_minutes?: number;
@@ -20,7 +20,7 @@ function creationArguments(value: unknown): EventToolArguments {
 
   if (typeof input.name !== "string" || !input.name.trim()) throw new Error("An event name is required.");
 
-  if (typeof input.when !== "string" || !input.when.trim()) throw new Error("An event date and time are required.");
+  if (typeof input.starts !== "string" || !input.starts.trim()) throw new Error("An event start is required.");
 
   if (input.description !== undefined && typeof input.description !== "string")
     throw new Error("Description must be text.");
@@ -61,35 +61,36 @@ export function createEventCreationTool({ client, store, timeZone }: EventAssist
     parameters: {
       type: "object",
       additionalProperties: false,
-      required: ["name", "when"],
+      required: ["name", "starts"],
       properties: {
         name: { type: "string", description: "Event name, maximum 100 characters" },
-        when: { type: "string", description: `Date and time; defaults to ${timeZone} when no offset is given` },
+        starts: {
+          type: "string",
+          description: `Start date/time, or first all-day date; defaults to ${timeZone} without an offset`,
+        },
         description: { type: "string", description: "Optional details, maximum 1000 characters" },
         link: { type: "string", description: "Optional http or https URL" },
         duration_minutes: { type: "integer", minimum: 15, maximum: 10080, description: "Defaults to 180" },
         attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
-        ends: { type: "string", description: "Optional end date/time" },
-        full_day: { type: "boolean", description: "Treat this as an all-day event; defaults to false" },
+        ends: { type: "string", description: "End date/time, or last inclusive all-day date" },
+        full_day: { type: "boolean", description: "Optional override; date-only starts are all-day automatically" },
       },
     },
     async execute(context, value) {
       const input = creationArguments(value);
-      const startsAt = (input.full_day ? parseDateOnly : parseDate)(input.when, timeZone);
+      const schedule = createEventSchedule(
+        {
+          starts: input.starts,
+          ends: input.ends,
+          fullDay: input.full_day,
+          durationMinutes: input.duration_minutes,
+        },
+        timeZone,
+      );
+      const now = Math.floor(Date.now() / 1000);
 
-      if (!startsAt) throw new Error("I couldn't understand the event date and time.");
-
-      if (startsAt <= Math.floor(Date.now() / 1000)) throw new Error("The event must be scheduled in the future.");
-
-      const endsAt =
-        (input.ends
-          ? parseEventEnd(input.ends, timeZone, startsAt, input.full_day ?? false)
-          : input.full_day
-            ? addZonedDays(startsAt, timeZone, 1)
-            : undefined) ?? undefined;
-
-      if (input.ends !== undefined && (!endsAt || endsAt <= startsAt))
-        throw new Error("The event end must be after its start.");
+      if (scheduleEndsAt(schedule) <= now || (schedule.type === "timed" && scheduleStartsAt(schedule) <= now))
+        throw new Error("The event must be scheduled in the future.");
 
       const name = input.name.trim();
 
@@ -118,18 +119,15 @@ export function createEventCreationTool({ client, store, timeZone }: EventAssist
           channelId: context.channelId,
           creatorId: context.userId,
           name,
-          startsAt,
-          endsAt,
-          fullDay: input.full_day ?? false,
+          schedule,
           description,
           link,
           attendanceLimit: input.attendance_limit,
-          durationMinutes: input.duration_minutes ?? 180,
         },
         (options) => channel.send(options),
       );
 
-      return `Created **${event.name}** for <t:${event.startsAt}:F> in <#${event.channelId}>.`;
+      return `Created **${event.name}** for ${formatEventSchedule(event.schedule)} in <#${event.channelId}>.`;
     },
   };
 }

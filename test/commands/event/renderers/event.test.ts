@@ -12,7 +12,11 @@ function communityEvent(): CommunityEvent {
     scheduledEventId: "scheduled",
     creatorId: "creator",
     name: "Board games",
-    startsAt: Math.floor(Date.now() / 1000) + 3600,
+    schedule: {
+      type: "timed",
+      startsAt: Math.floor(Date.now() / 1000) + 3600,
+      endsAt: Math.floor(Date.now() / 1000) + 7200,
+    },
     description: "Bring your favorites",
     link: "https://example.com/details",
     attendanceLimit: 5,
@@ -50,14 +54,16 @@ describe("renderEvent", () => {
   it("renders all-day events as dates without time or relative-time output", () => {
     const event = communityEvent();
 
-    event.startsAt = 1_787_292_000;
-    event.endsAt = 1_787_378_400;
-    event.fullDay = true;
+    event.schedule = {
+      type: "all-day",
+      startsOn: "2026-08-21",
+      endsOn: "2026-08-22",
+      timeZone: "America/Los_Angeles",
+    };
     const when = renderEvent(event)
       .embeds[0].toJSON()
       .fields?.find((field) => field.name === "When")?.value;
 
-    assert.equal(when, "<t:1787292000:D> – <t:1787378399:D> (all day)");
-    assert.doesNotMatch(when ?? "", /:[FRTtfd]>/);
+    assert.equal(when, "August 21, 2026 – August 22, 2026 (all day)");
   });
 });

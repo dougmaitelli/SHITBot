@@ -3,14 +3,11 @@ import {
   deleteScheduledEvent as deleteSharedScheduledEvent,
   editExternalScheduledEvent,
 } from "../../shared/scheduled-event.js";
+import { eventEndsAt, eventStartsAt } from "./schedule.js";
 import type { CommunityEvent } from "./types.js";
 import type { Client, Guild } from "discord.js";
 
-export async function createScheduledEvent(
-  guild: Guild,
-  event: CommunityEvent,
-  durationMinutes: number,
-): Promise<string> {
+function scheduledEventDetails(event: CommunityEvent) {
   const description = [
     event.description,
     `Organized by <@${event.creatorId}>. RSVP in <#${event.channelId}>.`,
@@ -18,34 +15,25 @@ export async function createScheduledEvent(
   ]
     .filter(Boolean)
     .join("\n\n");
+  const startsAt = eventStartsAt(event);
+  const endsAt = eventEndsAt(event);
 
-  return createExternalScheduledEvent(guild, {
+  return {
     name: event.name,
     description,
-    startsAt: event.startsAt,
-    durationMinutes,
-    endsAt: event.endsAt,
+    startsAt,
+    durationMinutes: Math.max(1, Math.round((endsAt - startsAt) / 60)),
+    endsAt,
     location: event.link ?? `See <#${event.channelId}>`,
-  });
+  };
+}
+
+export async function createScheduledEvent(guild: Guild, event: CommunityEvent): Promise<string> {
+  return createExternalScheduledEvent(guild, scheduledEventDetails(event));
 }
 
 export async function updateScheduledEvent(client: Client, event: CommunityEvent): Promise<void> {
-  const description = [
-    event.description,
-    `Organized by <@${event.creatorId}>. RSVP in <#${event.channelId}>.`,
-    event.link,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-
-  await editExternalScheduledEvent(client, event, {
-    name: event.name,
-    description,
-    startsAt: event.startsAt,
-    durationMinutes: event.durationMinutes ?? 180,
-    endsAt: event.endsAt,
-    location: event.link ?? `See <#${event.channelId}>`,
-  });
+  await editExternalScheduledEvent(client, event, scheduledEventDetails(event));
 }
 
 export async function deleteScheduledEvent(client: Client, event: CommunityEvent): Promise<void> {

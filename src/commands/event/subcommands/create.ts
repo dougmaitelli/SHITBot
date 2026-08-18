@@ -1,7 +1,7 @@
 import { MessageFlags } from "discord.js";
 import { logger } from "../../../logger.js";
-import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../../utils/date-parser.js";
 import { createCommunityEvent, parseEventLink } from "../actions/create.js";
+import { createEventSchedule, scheduleEndsAt, scheduleStartsAt } from "../schedule.js";
 import type { SubcommandSchema } from "../../command-schema.js";
 import type { CommandContext, GuildCommandInteraction } from "../../types.js";
 
@@ -12,15 +12,15 @@ export const createEventSchema: SubcommandSchema = {
     { type: "string", name: "name", description: "Event name", maxLength: 100, required: true },
     {
       type: "string",
-      name: "when",
-      description: "Date and time, e.g. 2026-08-15 7:30 PM",
+      name: "starts",
+      description: "Start date/time, or first date for an all-day event",
       maxLength: 100,
       required: true,
     },
     { type: "string", name: "description", description: "Optional event details", maxLength: 1000 },
     { type: "string", name: "link", description: "Optional event URL", maxLength: 512 },
-    { type: "string", name: "ends", description: "Optional end date/time", maxLength: 100 },
-    { type: "boolean", name: "full-day", description: "Treat this as an all-day event" },
+    { type: "string", name: "ends", description: "End date/time, or last inclusive all-day date", maxLength: 100 },
+    { type: "boolean", name: "full-day", description: "Override automatic all-day detection" },
     {
       type: "integer",
       name: "duration",
@@ -60,52 +60,30 @@ export function createEventHandler({ client, store, config }: CommandContext) {
 
       return;
     }
-    const fullDay = interaction.options.getBoolean("full-day") ?? false;
-    const startsAt = (fullDay ? parseDateOnly : parseDate)(
-      interaction.options.getString("when", true),
-      config.timeZone,
-    );
-
-    if (!startsAt) {
-      await interaction.reply({
-        content:
-          "I couldn't understand that date and time. Try `2 october 7pm`, `08/15/2026 19:30`, or `2026-08-15 19:30-07:00`.",
-        flags: MessageFlags.Ephemeral,
-      });
-
-      return;
-    }
-
-    if (startsAt <= Math.floor(Date.now() / 1000)) {
-      await interaction.reply({ content: "The event must be scheduled in the future.", flags: MessageFlags.Ephemeral });
-
-      return;
-    }
-
     const endsInput = interaction.options.getString("ends");
     const durationInput = interaction.options.getInteger("duration");
+    let schedule;
 
-    if (endsInput !== null && durationInput !== null) {
-      await interaction.reply({
-        content: "Use either an end date/time or a duration, not both.",
-        flags: MessageFlags.Ephemeral,
-      });
+    try {
+      schedule = createEventSchedule(
+        {
+          starts: interaction.options.getString("starts", true),
+          ends: endsInput ?? undefined,
+          fullDay: interaction.options.getBoolean("full-day") ?? undefined,
+          durationMinutes: durationInput ?? undefined,
+        },
+        config.timeZone,
+      );
+    } catch (error) {
+      await interaction.reply({ content: (error as Error).message, flags: MessageFlags.Ephemeral });
 
       return;
     }
 
-    const endsAt =
-      (endsInput
-        ? parseEventEnd(endsInput, config.timeZone, startsAt, fullDay)
-        : fullDay
-          ? addZonedDays(startsAt, config.timeZone, 1)
-          : undefined) ?? undefined;
+    const now = Math.floor(Date.now() / 1000);
 
-    if (endsInput !== null && (!endsAt || endsAt <= startsAt)) {
-      await interaction.reply({
-        content: "The event end must be a valid date/time after its start.",
-        flags: MessageFlags.Ephemeral,
-      });
+    if (scheduleEndsAt(schedule) <= now || (schedule.type === "timed" && scheduleStartsAt(schedule) <= now)) {
+      await interaction.reply({ content: "The event must be scheduled in the future.", flags: MessageFlags.Ephemeral });
 
       return;
     }
@@ -120,13 +98,10 @@ export function createEventHandler({ client, store, config }: CommandContext) {
           channelId: interaction.channelId,
           creatorId: interaction.user.id,
           name,
-          startsAt,
-          endsAt,
-          fullDay,
+          schedule,
           description: interaction.options.getString("description")?.trim() || undefined,
           link,
           attendanceLimit: interaction.options.getInteger("attendance-limit") ?? undefined,
-          durationMinutes: durationInput ?? 180,
         },
         (options) => interaction.channel.send(options),
       );

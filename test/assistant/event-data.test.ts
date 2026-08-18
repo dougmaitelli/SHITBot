@@ -28,7 +28,7 @@ describe("assistant event data", () => {
       messageId: "message",
       creatorId: "creator",
       name: "Picnic",
-      startsAt: 200,
+      schedule: { type: "timed", startsAt: 200, endsAt: 250 },
       attendanceLimit: 3,
       rsvps: { user: "yes", maybe: "maybe" },
       createdAt: 0,

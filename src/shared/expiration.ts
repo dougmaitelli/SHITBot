@@ -2,7 +2,6 @@ import { logger } from "../logger.js";
 
 export interface Expirable {
   id: string;
-  startsAt: number;
   closedAt?: number;
 }
 
@@ -10,6 +9,7 @@ interface ExpirationOptions<T extends Expirable> {
   list: () => T[];
   save: (item: T) => Promise<void>;
   updateMessage: (item: T) => Promise<void>;
+  expiresAt: (item: T) => number;
   itemName: string;
   intervalMs?: number;
 }
@@ -17,7 +17,7 @@ interface ExpirationOptions<T extends Expirable> {
 export async function closeExpired<T extends Expirable>(options: ExpirationOptions<T>): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
 
-  for (const item of options.list().filter((candidate) => !candidate.closedAt && candidate.startsAt <= now)) {
+  for (const item of options.list().filter((candidate) => !candidate.closedAt && options.expiresAt(candidate) <= now)) {
     item.closedAt = Date.now();
     await options.save(item);
     await options.updateMessage(item).catch((error) =>

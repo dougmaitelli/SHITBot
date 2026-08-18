@@ -90,8 +90,7 @@ describe("Discord scheduled-event assistant tools", () => {
       scheduledEventId: "scheduled",
       creatorId: "organizer",
       name: "Old name",
-      startsAt: 4_102_444_800,
-      durationMinutes: 180,
+      schedule: { type: "timed", startsAt: 4_102_444_800, endsAt: 4_102_455_600 },
       rsvps: {},
       createdAt: Date.now(),
     });
@@ -123,9 +122,9 @@ describe("Discord scheduled-event assistant tools", () => {
     assert.equal(messageEdited, true);
   });
 
-  it("anchors a time-only end to the exact event selected by ID", async () => {
+  it("anchors a time-only end to the configured timezone for the exact event selected by ID", async () => {
     const saved = store();
-    const startsAt = Date.parse("2100-09-01T09:00:00Z") / 1000;
+    const startsAt = Date.parse("2100-09-01T16:00:00Z") / 1000;
 
     await saved.load();
     await saved.setEvent({
@@ -136,8 +135,7 @@ describe("Discord scheduled-event assistant tools", () => {
       scheduledEventId: "scheduled",
       creatorId: "organizer",
       name: "PAX West day 1",
-      startsAt,
-      durationMinutes: 180,
+      schedule: { type: "timed", startsAt, endsAt: startsAt + 180 * 60 },
       rsvps: {},
       createdAt: Date.now(),
     });
@@ -156,15 +154,15 @@ describe("Discord scheduled-event assistant tools", () => {
       guilds: { fetch: async () => guild },
       channels: { fetch: async () => channel },
     } as unknown as Client;
-    const tools = createEventAssistantTools(client, saved, "UTC", "movie-nights");
+    const tools = createEventAssistantTools(client, saved, "America/Los_Angeles", "movie-nights");
 
     await tools
       .find((tool) => tool.name === "edit_event")!
       .execute({ guild, channelId: "channel", userId: "organizer" }, { event_id: "event:pax1", ends: "5pm" });
 
-    const expectedEnd = Date.parse("2100-09-01T17:00:00Z") / 1000;
+    const expectedEnd = Date.parse("2100-09-02T00:00:00Z") / 1000;
 
-    assert.equal(saved.getEvent("pax1")?.endsAt, expectedEnd);
+    assert.deepEqual(saved.getEvent("pax1")?.schedule, { type: "timed", startsAt, endsAt: expectedEnd });
     assert.equal(scheduledEdit?.scheduledEndTime, expectedEnd * 1000);
   });
 });

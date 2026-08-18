@@ -5,10 +5,7 @@ import type { CommunityEvent } from "../types.js";
 import type { Client } from "discord.js";
 
 export type CommunityEventEdits = Partial<
-  Pick<
-    CommunityEvent,
-    "name" | "startsAt" | "endsAt" | "fullDay" | "description" | "link" | "durationMinutes" | "attendanceLimit"
-  >
+  Pick<CommunityEvent, "name" | "schedule" | "description" | "link" | "attendanceLimit">
 >;
 
 export async function editCommunityEvent(

@@ -1,10 +1,10 @@
 import { MessageFlags } from "discord.js";
 import { isOrganizerOrModerator } from "../../../authorization.js";
 import { logger } from "../../../logger.js";
-import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../../utils/date-parser.js";
 import { parseEventLink } from "../actions/create.js";
 import { editCommunityEvent } from "../actions/edit.js";
 import { parseScheduledEventReference } from "../actions/import.js";
+import { editEventSchedule, formatEventSchedule, scheduleEndsAt, scheduleStartsAt } from "../schedule.js";
 import { isEventClosed } from "../status.js";
 import type { SubcommandSchema } from "../../command-schema.js";
 import type { CommandContext, GuildCommandInteraction } from "../../types.js";
@@ -22,11 +22,11 @@ export const editEventSchema: SubcommandSchema = {
       required: true,
     },
     { type: "string", name: "name", description: "New event name", maxLength: 100 },
-    { type: "string", name: "when", description: "New date and time", maxLength: 100 },
+    { type: "string", name: "starts", description: "New start date/time or first all-day date", maxLength: 100 },
     { type: "string", name: "description", description: "New details; blank clears them", maxLength: 1000 },
     { type: "string", name: "link", description: "New URL; blank clears it", maxLength: 512 },
-    { type: "string", name: "ends", description: "New end date/time", maxLength: 100 },
-    { type: "boolean", name: "full-day", description: "Whether this is an all-day event" },
+    { type: "string", name: "ends", description: "New end date/time or last inclusive all-day date", maxLength: 100 },
+    { type: "boolean", name: "full-day", description: "Override automatic all-day detection" },
     { type: "integer", name: "duration", description: "Duration in minutes", minValue: 15, maxValue: 10080 },
     {
       type: "integer",
@@ -63,7 +63,7 @@ export function editEventHandler({ client, store, config }: CommandContext, mess
 
     if (isEventClosed(event)) {
       await interaction.reply({
-        content: "This event has started and is no longer editable.",
+        content: "This event has ended and is no longer editable.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -80,7 +80,7 @@ export function editEventHandler({ client, store, config }: CommandContext, mess
     }
 
     const nameInput = interaction.options.getString("name");
-    const whenInput = interaction.options.getString("when");
+    const startsInput = interaction.options.getString("starts");
     const descriptionInput = interaction.options.getString("description");
     const linkInput = interaction.options.getString("link");
     const durationInput = interaction.options.getInteger("duration");
@@ -91,7 +91,7 @@ export function editEventHandler({ client, store, config }: CommandContext, mess
     if (
       [
         nameInput,
-        whenInput,
+        startsInput,
         descriptionInput,
         linkInput,
         durationInput,
@@ -113,43 +113,33 @@ export function editEventHandler({ client, store, config }: CommandContext, mess
       return;
     }
 
-    const fullDay = fullDayInput ?? event.fullDay ?? false;
-    const startsAt =
-      whenInput === null
-        ? fullDayInput === true && !event.fullDay
-          ? addZonedDays(event.startsAt, config.timeZone, 0)
-          : event.startsAt
-        : (fullDay ? parseDateOnly : parseDate)(whenInput, config.timeZone);
+    let schedule;
 
-    if (!startsAt || startsAt <= Math.floor(Date.now() / 1000)) {
-      await interaction.reply({ content: "Provide a valid future date and time.", flags: MessageFlags.Ephemeral });
-
-      return;
-    }
-
-    if (endsInput !== null && durationInput !== null) {
-      await interaction.reply({
-        content: "Use either an end date/time or a duration, not both.",
-        flags: MessageFlags.Ephemeral,
-      });
+    try {
+      schedule = editEventSchedule(
+        event.schedule,
+        {
+          starts: startsInput ?? undefined,
+          ends: endsInput ?? undefined,
+          fullDay: fullDayInput ?? undefined,
+          durationMinutes: durationInput ?? undefined,
+        },
+        config.timeZone,
+      );
+    } catch (error) {
+      await interaction.reply({ content: (error as Error).message, flags: MessageFlags.Ephemeral });
 
       return;
     }
 
-    const previousDuration = event.endsAt ? event.endsAt - event.startsAt : (event.durationMinutes ?? 180) * 60;
-    const endsAt = endsInput
-      ? parseEventEnd(endsInput, config.timeZone, startsAt, fullDay)
-      : durationInput !== null
-        ? startsAt + durationInput * 60
-        : whenInput !== null
-          ? startsAt + previousDuration
-          : fullDayInput === true && !event.fullDay
-            ? addZonedDays(startsAt, config.timeZone, 1)
-            : event.endsAt;
+    const now = Math.floor(Date.now() / 1000);
 
-    if (endsAt !== undefined && (!endsAt || endsAt <= startsAt)) {
+    if (
+      scheduleEndsAt(schedule) <= now ||
+      (startsInput !== null && schedule.type === "timed" && scheduleStartsAt(schedule) <= now)
+    ) {
       await interaction.reply({
-        content: "The event end must be a valid date/time after its start.",
+        content: "Provide an event schedule that has not ended.",
         flags: MessageFlags.Ephemeral,
       });
 
@@ -173,16 +163,13 @@ export function editEventHandler({ client, store, config }: CommandContext, mess
     try {
       const updated = await editCommunityEvent(client, store, messages, event, {
         name,
-        startsAt,
-        endsAt,
-        fullDay,
+        schedule,
         description: descriptionInput === null ? event.description : descriptionInput.trim() || undefined,
         link,
-        durationMinutes: durationInput ?? event.durationMinutes ?? 180,
         attendanceLimit: attendanceInput ?? event.attendanceLimit,
       });
 
-      await interaction.editReply(`Updated **${updated.name}** for <t:${updated.startsAt}:F>.`);
+      await interaction.editReply(`Updated **${updated.name}** for ${formatEventSchedule(updated.schedule)}.`);
     } catch (error) {
       logger.error("Could not edit event", { error, eventId: event.id, userId: interaction.user.id });
       await interaction.editReply("I couldn't update the event. Check my event and channel permissions.");

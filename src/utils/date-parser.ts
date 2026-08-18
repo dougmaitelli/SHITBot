@@ -117,6 +117,79 @@ export function parseDateOnly(input: string, timeZone: string, now = new Date())
   );
 }
 
+export function calendarDateToTimestamp(date: string, timeZone: string): number {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+
+  if (!match) throw new Error(`Invalid calendar date: ${date}`);
+
+  const [, year, month, day] = match;
+
+  return Math.floor(
+    zonedDateTimeToDate(
+      {
+        year: Number(year),
+        month: Number(month),
+        day: Number(day),
+        hour: 0,
+        minute: 0,
+        second: 0,
+      },
+      timeZone,
+    ).getTime() / 1000,
+  );
+}
+
+export function timestampToCalendarDate(timestamp: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(timestamp * 1000));
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+export function parseCalendarDate(input: string, timeZone: string, now = new Date()): string | null {
+  const timestamp = parseDateOnly(input, timeZone, now);
+
+  return timestamp === null ? null : timestampToCalendarDate(timestamp, timeZone);
+}
+
+export function addCalendarDays(date: string, days: number): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+
+  if (!match) throw new Error(`Invalid calendar date: ${date}`);
+
+  const shifted = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + days));
+
+  return `${shifted.getUTCFullYear().toString().padStart(4, "0")}-${(shifted.getUTCMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${shifted.getUTCDate().toString().padStart(2, "0")}`;
+}
+
+export function calendarDaysBetween(start: string, end: string): number {
+  const value = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+
+    if (!year || !month || !day) throw new Error(`Invalid calendar date: ${date}`);
+
+    return Date.UTC(year, month - 1, day);
+  };
+
+  return Math.round((value(end) - value(start)) / 86_400_000);
+}
+
+export function formatCalendarDate(date: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
 export function parseEventEnd(input: string, timeZone: string, startsAt: number, fullDay: boolean): number | null {
   const eventDate = new Date(startsAt * 1000);
 

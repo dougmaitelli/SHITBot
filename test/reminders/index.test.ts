@@ -16,7 +16,7 @@ describe("event reminders", () => {
       messageId: "event-message",
       creatorId: "creator",
       name: "Picnic",
-      startsAt: now + 3600,
+      schedule: { type: "timed", startsAt: now + 3600, endsAt: now + 7200 },
       rsvps: {},
       createdAt: Date.now(),
     });

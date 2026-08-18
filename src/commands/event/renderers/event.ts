@@ -1,13 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, type APIEmbedField } from "discord.js";
 import { buildRsvpButtons, buildRsvpFields } from "../../../shared/rsvp.js";
+import { formatEventSchedule, isEventEnded } from "../schedule.js";
 import type { CommunityEvent } from "../types.js";
 
-function isClosed(event: CommunityEvent): boolean {
-  return Boolean(event.closedAt) || event.startsAt <= Math.floor(Date.now() / 1000);
-}
-
 export function renderEvent(event: CommunityEvent) {
-  const closed = isClosed(event);
+  const closed = isEventEnded(event);
   const details: APIEmbedField[] = [];
 
   if (event.link) details.push({ name: "Link", value: `[Open link](${event.link})`, inline: true });
@@ -20,13 +17,6 @@ export function renderEvent(event: CommunityEvent) {
     });
   }
 
-  const when = event.fullDay
-    ? event.endsAt
-      ? `<t:${event.startsAt}:D> – <t:${event.endsAt - 1}:D> (all day)`
-      : `<t:${event.startsAt}:D> (all day)`
-    : event.endsAt
-      ? `<t:${event.startsAt}:F> – <t:${event.endsAt}:F>\n<t:${event.startsAt}:R>`
-      : `<t:${event.startsAt}:F>\n<t:${event.startsAt}:R>`;
   const embed = new EmbedBuilder()
     .setColor(closed ? 0x747f8d : 0x5865f2)
     .setTitle(`📅 ${event.name}`)
@@ -36,7 +26,14 @@ export function renderEvent(event: CommunityEvent) {
         : `Organized by <@${event.creatorId}>`,
     )
     .addFields(
-      { name: "When", value: when, inline: true },
+      {
+        name: "When",
+        value:
+          event.schedule.type === "timed"
+            ? `${formatEventSchedule(event.schedule)}\n<t:${event.schedule.startsAt}:R>`
+            : formatEventSchedule(event.schedule),
+        inline: true,
+      },
       ...details,
       ...buildRsvpFields(event.rsvps, event.attendanceLimit),
     )

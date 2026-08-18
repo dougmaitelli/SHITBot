@@ -1,4 +1,5 @@
 import { closeExpired, startExpirationJob as startSharedExpirationJob } from "../../shared/expiration.js";
+import { eventEndsAt } from "./schedule.js";
 import type { CommunityEvent } from "./types.js";
 import type { BotStore } from "../../store.js";
 
@@ -9,6 +10,7 @@ export async function closeExpiredEvents(store: BotStore, updateMessage: UpdateM
     list: () => store.listEvents(),
     save: (event) => store.setEvent(event),
     updateMessage,
+    expiresAt: eventEndsAt,
     itemName: "event",
   });
 }
@@ -18,6 +20,7 @@ export function startExpirationJob(store: BotStore, updateMessage: UpdateMessage
     list: () => store.listEvents(),
     save: (event) => store.setEvent(event),
     updateMessage,
+    expiresAt: eventEndsAt,
     itemName: "event",
   });
 }

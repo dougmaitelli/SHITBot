@@ -39,6 +39,7 @@ async function discordItems(guild: Guild, store: BotStore): Promise<VisibleEvent
             creatorId: event.creatorId ?? "",
             title: event.name,
             startsAt: Math.floor(event.scheduledStartTimestamp! / 1000),
+            endsAt: event.scheduledEndTimestamp ? Math.floor(event.scheduledEndTimestamp / 1000) : undefined,
             details: [event.description, event.entityMetadata?.location].filter(Boolean).join("\n") || undefined,
             rsvps: {},
             url: event.url,

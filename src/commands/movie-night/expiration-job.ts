@@ -9,6 +9,7 @@ export async function closeExpiredMovieNights(store: BotStore, updateMessage: Up
     list: () => store.list(),
     save: (night) => store.set(night),
     updateMessage,
+    expiresAt: (night) => night.startsAt,
     itemName: "movie night",
   });
 }
@@ -18,6 +19,7 @@ export function startExpirationJob(store: BotStore, updateMessage: UpdateNightMe
     list: () => store.list(),
     save: (night) => store.set(night),
     updateMessage,
+    expiresAt: (night) => night.startsAt,
     itemName: "movie night",
   });
 }

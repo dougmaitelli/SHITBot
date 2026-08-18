@@ -57,12 +57,13 @@ export async function adoptCommunityEvent(
     scheduledEventId: scheduledEvent.id,
     creatorId: scheduledEvent.creatorId ?? input.importedById,
     name: scheduledEvent.name,
-    startsAt: Math.floor(scheduledEvent.scheduledStartTimestamp / 1000),
-    durationMinutes:
-      scheduledEvent.scheduledEndTimestamp && scheduledEvent.scheduledStartTimestamp
-        ? Math.round((scheduledEvent.scheduledEndTimestamp - scheduledEvent.scheduledStartTimestamp) / 60_000)
-        : 180,
-    endsAt: scheduledEvent.scheduledEndTimestamp ? Math.floor(scheduledEvent.scheduledEndTimestamp / 1000) : undefined,
+    schedule: {
+      type: "timed",
+      startsAt: Math.floor(scheduledEvent.scheduledStartTimestamp / 1000),
+      endsAt: scheduledEvent.scheduledEndTimestamp
+        ? Math.floor(scheduledEvent.scheduledEndTimestamp / 1000)
+        : Math.floor(scheduledEvent.scheduledStartTimestamp / 1000) + 180 * 60,
+    },
     description: scheduledEvent.description ?? undefined,
     attendanceLimit: input.attendanceLimit,
     rsvps: {},

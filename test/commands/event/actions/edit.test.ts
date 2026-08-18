@@ -18,8 +18,7 @@ describe("editCommunityEvent", () => {
       scheduledEventId: "scheduled",
       creatorId: "creator",
       name: "Old name",
-      startsAt: 4_102_444_800,
-      durationMinutes: 180,
+      schedule: { type: "timed", startsAt: 4_102_444_800, endsAt: 4_102_455_600 },
       rsvps: {},
       createdAt: Date.now(),
     };

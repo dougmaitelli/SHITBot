@@ -1,5 +1,20 @@
 import type { RsvpStatus } from "../movie-night/types.js";
 
+export interface TimedEventSchedule {
+  type: "timed";
+  startsAt: number;
+  endsAt: number;
+}
+
+export interface AllDayEventSchedule {
+  type: "all-day";
+  startsOn: string;
+  endsOn: string;
+  timeZone: string;
+}
+
+export type EventSchedule = TimedEventSchedule | AllDayEventSchedule;
+
 export interface CommunityEvent {
   id: string;
   guildId: string;
@@ -8,10 +23,7 @@ export interface CommunityEvent {
   scheduledEventId?: string;
   creatorId: string;
   name: string;
-  startsAt: number;
-  durationMinutes?: number;
-  endsAt?: number;
-  fullDay?: boolean;
+  schedule: EventSchedule;
   description?: string;
   link?: string;
   attendanceLimit?: number;

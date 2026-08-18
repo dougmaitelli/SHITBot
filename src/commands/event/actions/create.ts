@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { renderEvent } from "../renderers/event.js";
 import { createScheduledEvent, deleteScheduledEvent } from "../scheduled-event.js";
 import type { BotStore } from "../../../store.js";
-import type { CommunityEvent } from "../types.js";
+import type { CommunityEvent, EventSchedule } from "../types.js";
 import type { Client, Guild } from "discord.js";
 
 export interface CreateCommunityEventInput {
@@ -10,13 +10,10 @@ export interface CreateCommunityEventInput {
   channelId: string;
   creatorId: string;
   name: string;
-  startsAt: number;
+  schedule: EventSchedule;
   description?: string;
   link?: string;
   attendanceLimit?: number;
-  durationMinutes: number;
-  endsAt?: number;
-  fullDay?: boolean;
 }
 
 type SendEventMessage = (
@@ -48,10 +45,7 @@ export async function createCommunityEvent(
     messageId: "",
     creatorId: input.creatorId,
     name: input.name,
-    startsAt: input.startsAt,
-    durationMinutes: input.durationMinutes,
-    endsAt: input.endsAt,
-    fullDay: input.fullDay,
+    schedule: input.schedule,
     description: input.description,
     link: input.link,
     attendanceLimit: input.attendanceLimit,
@@ -59,7 +53,7 @@ export async function createCommunityEvent(
     createdAt: Date.now(),
   };
 
-  event.scheduledEventId = await createScheduledEvent(input.guild, event, input.durationMinutes);
+  event.scheduledEventId = await createScheduledEvent(input.guild, event);
   let message: Awaited<ReturnType<SendEventMessage>> | undefined;
 
   try {

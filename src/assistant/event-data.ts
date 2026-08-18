@@ -1,3 +1,4 @@
+import { eventEndsAt, eventStartsAt } from "../commands/event/schedule.js";
 import type { Rsvps } from "../shared/rsvp.js";
 import type { BotStore } from "../store.js";
 
@@ -10,6 +11,8 @@ export interface UpcomingItem {
   creatorId: string;
   title: string;
   startsAt: number;
+  endsAt?: number;
+  allDay?: { startsOn: string; endsOn: string };
   details?: string;
   attendanceLimit?: number;
   rsvps: Rsvps;
@@ -20,7 +23,7 @@ export interface UpcomingItem {
 export function upcomingItems(store: BotStore, guildId: string, now = Math.floor(Date.now() / 1000)): UpcomingItem[] {
   const events: UpcomingItem[] = store
     .listEvents()
-    .filter((event) => event.guildId === guildId && !event.closedAt && event.startsAt > now)
+    .filter((event) => event.guildId === guildId && !event.closedAt && eventEndsAt(event) > now)
     .map((event) => ({
       ref: `event:${event.id}`,
       kind: "event",
@@ -29,7 +32,12 @@ export function upcomingItems(store: BotStore, guildId: string, now = Math.floor
       messageId: event.messageId,
       creatorId: event.creatorId,
       title: event.name,
-      startsAt: event.startsAt,
+      startsAt: eventStartsAt(event),
+      endsAt: eventEndsAt(event),
+      allDay:
+        event.schedule.type === "all-day"
+          ? { startsOn: event.schedule.startsOn, endsOn: event.schedule.endsOn }
+          : undefined,
       details: event.description,
       attendanceLimit: event.attendanceLimit,
       rsvps: event.rsvps,

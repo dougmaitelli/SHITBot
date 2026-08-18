@@ -1,8 +1,8 @@
 import { objectArguments } from "../../../assistant/tool-utils.js";
 import { isOrganizerOrModerator } from "../../../authorization.js";
-import { addZonedDays, parseDate, parseDateOnly, parseEventEnd } from "../../../utils/date-parser.js";
 import { parseEventLink } from "../actions/create.js";
 import { editCommunityEvent } from "../actions/edit.js";
+import { editEventSchedule, formatEventSchedule, isEventEnded, scheduleEndsAt, scheduleStartsAt } from "../schedule.js";
 import type { EventAssistantToolDependencies } from "./types.js";
 import type { AssistantTool } from "../../../assistant/types.js";
 
@@ -24,13 +24,16 @@ export function createEventEditTool({
       properties: {
         event_id: { type: "string", description: "Stable ID returned by list_upcoming_events, such as event:abcd1234" },
         name: { type: "string", description: "New event name, maximum 100 characters" },
-        when: { type: "string", description: `New date and time; defaults to ${timeZone} without an offset` },
+        starts: {
+          type: "string",
+          description: `New start date/time or first all-day date; defaults to ${timeZone} without an offset`,
+        },
         description: { type: "string", description: "New details; empty text clears them" },
         link: { type: "string", description: "New http/https URL; empty text clears it" },
         duration_minutes: { type: "integer", minimum: 15, maximum: 10080 },
         attendance_limit: { type: "integer", minimum: 1, maximum: 100000 },
-        ends: { type: "string", description: "New end date/time" },
-        full_day: { type: "boolean", description: "Whether this is an all-day event" },
+        ends: { type: "string", description: "New end date/time or last inclusive all-day date" },
+        full_day: { type: "boolean", description: "Optional override; date-only starts are all-day automatically" },
       },
     },
     async execute(context, value) {
@@ -42,15 +45,14 @@ export function createEventEditTool({
 
       if (!event || event.guildId !== context.guild.id) throw new Error("That managed event could not be found.");
 
-      if (event.closedAt || event.startsAt <= Math.floor(Date.now() / 1000))
-        throw new Error("That event has started and is no longer editable.");
+      if (isEventEnded(event)) throw new Error("That event has ended and is no longer editable.");
 
       if (!(await isOrganizerOrModerator(context.guild, context.userId, event.creatorId, roles)))
         throw new Error("Only the event organizer or a moderator can edit it.");
 
       const editable = [
         "name",
-        "when",
+        "starts",
         "description",
         "link",
         "duration_minutes",
@@ -70,7 +72,7 @@ export function createEventEditTool({
       if (input.description !== undefined && (typeof input.description !== "string" || input.description.length > 1000))
         throw new Error("Description must be text with at most 1000 characters.");
 
-      if (input.when !== undefined && typeof input.when !== "string") throw new Error("when must be text.");
+      if (input.starts !== undefined && typeof input.starts !== "string") throw new Error("starts must be text.");
 
       if (input.link !== undefined && typeof input.link !== "string") throw new Error("Link must be text.");
 
@@ -98,31 +100,23 @@ export function createEventEditTool({
       )
         throw new Error("Attendance limit must be from 1 to 100000.");
 
-      const fullDay = input.full_day ?? event.fullDay ?? false;
-      const startsAt =
-        input.when === undefined
-          ? input.full_day === true && !event.fullDay
-            ? addZonedDays(event.startsAt, timeZone, 0)
-            : event.startsAt
-          : (fullDay ? parseDateOnly : parseDate)(input.when, timeZone);
+      const schedule = editEventSchedule(
+        event.schedule,
+        {
+          starts: input.starts,
+          ends: input.ends,
+          fullDay: input.full_day,
+          durationMinutes: input.duration_minutes as number | undefined,
+        },
+        timeZone,
+      );
+      const now = Math.floor(Date.now() / 1000);
 
-      if (!startsAt || startsAt <= Math.floor(Date.now() / 1000))
-        throw new Error("Provide a valid future date and time.");
-
-      const previousDuration = event.endsAt ? event.endsAt - event.startsAt : (event.durationMinutes ?? 180) * 60;
-      const endsAt =
-        input.ends !== undefined
-          ? parseEventEnd(input.ends, timeZone, startsAt, fullDay)
-          : input.duration_minutes !== undefined
-            ? startsAt + (input.duration_minutes as number) * 60
-            : input.when !== undefined
-              ? startsAt + previousDuration
-              : input.full_day === true && !event.fullDay
-                ? addZonedDays(startsAt, timeZone, 1)
-                : event.endsAt;
-
-      if (endsAt !== undefined && (!endsAt || endsAt <= startsAt))
-        throw new Error("The event end must be after its start.");
+      if (
+        scheduleEndsAt(schedule) <= now ||
+        (input.starts !== undefined && schedule.type === "timed" && scheduleStartsAt(schedule) <= now)
+      )
+        throw new Error("Provide an event schedule that has not ended.");
 
       let link = event.link;
 
@@ -133,16 +127,13 @@ export function createEventEditTool({
       }
       const updated = await editCommunityEvent(client, store, messages, event, {
         name: input.name === undefined ? event.name : input.name.trim(),
-        startsAt,
-        endsAt,
-        fullDay,
+        schedule,
         description: input.description === undefined ? event.description : input.description.trim() || undefined,
         link,
-        durationMinutes: (input.duration_minutes as number | undefined) ?? event.durationMinutes ?? 180,
         attendanceLimit: (input.attendance_limit as number | undefined) ?? event.attendanceLimit,
       });
 
-      return `Updated **${updated.name}** for <t:${updated.startsAt}:F>.`;
+      return `Updated **${updated.name}** for ${formatEventSchedule(updated.schedule)}.`;
     },
   };
 }

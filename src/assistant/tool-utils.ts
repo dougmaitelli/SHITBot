@@ -1,3 +1,4 @@
+import { formatCalendarDate } from "../utils/date-parser.js";
 import { attendance, type UpcomingItem } from "./event-data.js";
 
 export function objectArguments(value: unknown): Record<string, unknown> {
@@ -17,12 +18,19 @@ export function requestedLimit(value: unknown): number {
 
 export function itemSummary(item: UpcomingItem, userId?: string) {
   const counts = attendance(item);
+  const discordTime = item.allDay
+    ? item.allDay.startsOn === item.allDay.endsOn
+      ? `${formatCalendarDate(item.allDay.startsOn)} (all day)`
+      : `${formatCalendarDate(item.allDay.startsOn)} – ${formatCalendarDate(item.allDay.endsOn)} (all day)`
+    : item.endsAt
+      ? `<t:${item.startsAt}:F> – <t:${item.endsAt}:F>`
+      : `<t:${item.startsAt}:F>`;
 
   return {
     id: item.ref,
     type: item.kind,
     title: item.title,
-    discord_time: `<t:${item.startsAt}:F>`,
+    discord_time: discordTime,
     channel: `<#${item.channelId}>`,
     organizer: `<@${item.creatorId}>`,
     details: item.details?.slice(0, 300) ?? null,
