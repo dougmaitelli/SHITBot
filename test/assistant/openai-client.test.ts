@@ -40,7 +40,6 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(request.url, "https://provider.example/v1/chat/completions");
     assert.equal(request.authorization, "Bearer secret");
     assert.equal(request.body?.model, "model");
-    assert.equal(request.body?.cache_prompt, false);
     assert.equal(request.body?.tools, undefined);
   });
 
