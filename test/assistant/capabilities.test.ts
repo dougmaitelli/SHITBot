@@ -46,6 +46,13 @@ describe("assistant tool-use instructions", () => {
     assert.match(TOOL_USE_INSTRUCTIONS, /Never reinterpret an action failure.*missing.*ID.*invalid/i);
   });
 
+  it("treats first-person attendance requests as belonging to the requester", () => {
+    assert.match(TOOL_USE_INSTRUCTIONS, /I, me, and my.*requesting Discord user.*never.*bot/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /which events or movie nights.*list_my_upcoming_events/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /requester-filtered results.*second person/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /never say.*bot.*attending/i);
+  });
+
   it("instructs the model to finish within the configured output limit", () => {
     const instruction = outputLengthInstruction(1600);
 

@@ -12,7 +12,7 @@ export function createMovieNightListTools({
       name: "list_upcoming_movie_nights",
       isAvailable: availableInMovieChannel,
       description:
-        "List upcoming movie nights in this server, ordered by date. Available only in the movie-night channel.",
+        "List all upcoming movie nights in this server, ordered by date. This is server-wide and is not filtered by the requesting user's attendance; do not use it for requests about movie nights I, me, or my am attending. Available only in the movie-night channel.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -26,6 +26,9 @@ export function createMovieNightListTools({
         const items = nights(context.guild.id).slice(0, requestedLimit(input.limit));
 
         return JSON.stringify({
+          scope: "server-wide",
+          requesting_user_filtered: false,
+          instruction: "These are all server movie nights, not movie nights the requesting user is attending.",
           movie_nights: items.map((item) => itemSummary(item)),
           total_returned: items.length,
         });
@@ -35,7 +38,7 @@ export function createMovieNightListTools({
       name: "list_my_upcoming_movie_nights",
       isAvailable: availableInMovieChannel,
       description:
-        "List upcoming movie nights where the requesting user RSVP'd Going, optionally including Maybe. Available only in the movie-night channel.",
+        "List upcoming movie nights where the requesting user RSVP'd Going, optionally including Maybe. Use this for requests about movie nights I, me, or my am attending. Address the requester as you, never as I or the bot. Available only in the movie-night channel.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -57,6 +60,11 @@ export function createMovieNightListTools({
           .slice(0, requestedLimit(input.limit));
 
         return JSON.stringify({
+          scope: "requesting-user-attendance",
+          requesting_user_filtered: true,
+          requesting_user_id: context.userId,
+          instruction:
+            "These are the requesting user's movie nights. Address the requester as 'you'; never say you or the bot are attending.",
           movie_nights: items.map((item) => itemSummary(item, context.userId)),
           total_returned: items.length,
         });

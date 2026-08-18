@@ -28,6 +28,63 @@ describe("movie-night assistant tools", () => {
     );
   });
 
+  it("lists attendance for the requesting user rather than the bot", async () => {
+    const saved = store();
+
+    await saved.load();
+    await saved.set({
+      id: "requester-night",
+      guildId: "guild",
+      channelId: "movies",
+      messageId: "message-1",
+      creatorId: "organizer",
+      startsAt: 4_102_444_800,
+      durationMinutes: 180,
+      location: "Theater",
+      movie: "Arrival",
+      votingOpen: false,
+      rsvps: { "100": "yes" },
+      suggestions: [],
+      createdAt: Date.now(),
+    });
+    await saved.set({
+      id: "bot-night",
+      guildId: "guild",
+      channelId: "movies",
+      messageId: "message-2",
+      creatorId: "organizer",
+      startsAt: 4_102_444_800,
+      durationMinutes: 180,
+      location: "Theater",
+      movie: "Alien",
+      votingOpen: false,
+      rsvps: { "200": "yes" },
+      suggestions: [],
+      createdAt: Date.now(),
+    });
+    const channel = { id: "movies" };
+    const tools = createMovieNightAssistantTools({} as Client, saved, "UTC", async () => channel);
+    const list = tools.find((tool) => tool.name === "list_my_upcoming_movie_nights")!;
+    const result = JSON.parse(
+      await list.execute({ guild: { id: "guild" } as Guild, channelId: "movies", userId: "100" }, {}),
+    ) as {
+      scope: string;
+      requesting_user_filtered: boolean;
+      requesting_user_id: string;
+      instruction: string;
+      movie_nights: Array<Record<string, unknown>>;
+    };
+
+    assert.equal(result.scope, "requesting-user-attendance");
+    assert.equal(result.requesting_user_filtered, true);
+    assert.equal(result.requesting_user_id, "100");
+    assert.match(result.instruction, /requesting user's movie nights.*you.*never.*bot.*attending/i);
+    assert.deepEqual(
+      result.movie_nights.map((night) => night.title),
+      ["Movie Night: Arrival"],
+    );
+  });
+
   it("edits a managed movie night in Discord, storage, and its message", async () => {
     const saved = store();
     const startsAt = Date.parse("2100-09-01T17:00:00Z") / 1000;

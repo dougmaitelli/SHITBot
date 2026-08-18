@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
 import { GuildScheduledEventStatus, type Client, type Guild, type GuildScheduledEvent } from "discord.js";
 import { createEventAssistantTools } from "../../../../src/commands/event/assistant-tools/index.js";
+import { createEventListTools } from "../../../../src/commands/event/assistant-tools/list.js";
 import { BotStore } from "../../../../src/store.js";
 
 function store(): BotStore {
@@ -79,14 +80,75 @@ describe("Discord scheduled-event assistant tools", () => {
 
     const list = tools.find((tool) => tool.name === "list_upcoming_events")!;
     const result = JSON.parse(await list.execute({ guild, channelId: "general", userId: "user" }, {})) as {
+      scope: string;
+      requesting_user_filtered: boolean;
       events: Array<Record<string, unknown>>;
     };
 
+    assert.equal(result.scope, "server-wide");
+    assert.equal(result.requesting_user_filtered, false);
     assert.equal(result.events[0]?.id, "discord-event:123");
     assert.equal(result.events[0]?.title, "Community Town Hall");
     assert.equal(result.events[0]?.discord_interested, 42);
     assert.equal(result.events[0]?.discord_time, `<t:${Math.floor(future / 1000)}:F>`);
     assert.equal(result.events[0]?.starts_at, undefined);
+  });
+
+  it("lists attendance for the requesting user rather than the bot", async () => {
+    const scheduled = {
+      fetchSubscribers: async () => new Map(),
+    } as unknown as GuildScheduledEvent;
+    const tools = createEventListTools(async () => [
+      {
+        item: {
+          ref: "event:requester-event",
+          kind: "event",
+          guildId: "guild",
+          channelId: "general",
+          messageId: "message-1",
+          creatorId: "organizer",
+          title: "Requester event",
+          startsAt: 4_102_444_800,
+          endsAt: 4_102_455_600,
+          rsvps: { "100": "yes" },
+        },
+        scheduled,
+      },
+      {
+        item: {
+          ref: "event:bot-event",
+          kind: "event",
+          guildId: "guild",
+          channelId: "general",
+          messageId: "message-2",
+          creatorId: "organizer",
+          title: "Bot event",
+          startsAt: 4_102_444_800,
+          endsAt: 4_102_455_600,
+          rsvps: { "200": "yes" },
+        },
+        scheduled,
+      },
+    ]);
+    const list = tools.find((tool) => tool.name === "list_my_upcoming_events")!;
+    const result = JSON.parse(
+      await list.execute({ guild: { id: "guild" } as Guild, channelId: "general", userId: "100" }, {}),
+    ) as {
+      scope: string;
+      requesting_user_filtered: boolean;
+      requesting_user_id: string;
+      instruction: string;
+      events: Array<Record<string, unknown>>;
+    };
+
+    assert.equal(result.scope, "requesting-user-attendance");
+    assert.equal(result.requesting_user_filtered, true);
+    assert.equal(result.requesting_user_id, "100");
+    assert.match(result.instruction, /requesting user's events.*you.*never.*bot.*attending/i);
+    assert.deepEqual(
+      result.events.map((event) => event.title),
+      ["Requester event"],
+    );
   });
 
   it("edits a managed event in Discord, storage, and its message", async () => {

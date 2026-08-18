@@ -16,7 +16,7 @@ export function createEventListTools(visible: VisibleEvents): AssistantTool[] {
     {
       name: "list_upcoming_events",
       description:
-        "List all upcoming Discord Scheduled Events in this server, including events created manually or by other bots.",
+        "List all upcoming Discord Scheduled Events in this server, including events created manually or by other bots. This is server-wide and is not filtered by the requesting user's attendance; do not use it for requests about events I, me, or my am attending.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -29,6 +29,9 @@ export function createEventListTools(visible: VisibleEvents): AssistantTool[] {
         const items = (await visible(context)).slice(0, requestedLimit(input.limit));
 
         return JSON.stringify({
+          scope: "server-wide",
+          requesting_user_filtered: false,
+          instruction: "These are all server events, not events the requesting user is attending.",
           events: items.map(({ item }) => itemSummary(item)),
           total_returned: items.length,
         });
@@ -37,7 +40,7 @@ export function createEventListTools(visible: VisibleEvents): AssistantTool[] {
     {
       name: "list_my_upcoming_events",
       description:
-        "List upcoming Discord Scheduled Events the requesting user marked Interested in, plus bot events where they RSVP'd Going. Can include bot Maybe responses.",
+        "List upcoming Discord Scheduled Events the requesting user marked Interested in, plus bot events where they RSVP'd Going. Use this for requests about events I, me, or my am attending. Address the requester as you, never as I or the bot. Can include bot Maybe responses.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -63,6 +66,11 @@ export function createEventListTools(visible: VisibleEvents): AssistantTool[] {
         }
 
         return JSON.stringify({
+          scope: "requesting-user-attendance",
+          requesting_user_filtered: true,
+          requesting_user_id: context.userId,
+          instruction:
+            "These are the requesting user's events. Address the requester as 'you'; never say you or the bot are attending.",
           events: matches.map((item) => itemSummary(item, context.userId)),
           total_returned: matches.length,
         });
