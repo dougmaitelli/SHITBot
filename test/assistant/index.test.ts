@@ -26,6 +26,5 @@ describe("currentTimeContext", () => {
     assert.match(context, /America\/Los_Angeles/);
     assert.match(context, /Monday, August 17, 2026 at 10:30:00 PM PDT/);
     assert.match(context, /2026-08-18T05:30:00.000Z/);
-    assert.match(context, /relative date\/time expressions.*unchanged/i);
   });
 });

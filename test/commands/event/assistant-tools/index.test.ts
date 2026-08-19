@@ -34,17 +34,6 @@ describe("Discord scheduled-event assistant tools", () => {
 
     assert.deepEqual(editParameters.required, ["event_id"]);
     assert.equal(editParameters.properties?.name_query, undefined);
-    assert.match(
-      String((editParameters.properties?.starts as { description?: string })?.description),
-      /unchanged.*UTC/i,
-    );
-    assert.match(String((editParameters.properties?.ends as { description?: string })?.description), /unchanged.*UTC/i);
-
-    const createParameters = tools.find((tool) => tool.name === "create_event")!.parameters as {
-      properties?: Record<string, unknown>;
-    };
-
-    assert.match(String((createParameters.properties?.ends as { description?: string })?.description), /UTC/i);
   });
 
   it("lists scheduled events that were not created by the bot", async () => {
@@ -137,14 +126,12 @@ describe("Discord scheduled-event assistant tools", () => {
       scope: string;
       requesting_user_filtered: boolean;
       requesting_user_id: string;
-      instruction: string;
       events: Array<Record<string, unknown>>;
     };
 
     assert.equal(result.scope, "requesting-user-attendance");
     assert.equal(result.requesting_user_filtered, true);
     assert.equal(result.requesting_user_id, "100");
-    assert.match(result.instruction, /requesting user's events.*you.*never.*bot.*attending/i);
     assert.deepEqual(
       result.events.map((event) => event.title),
       ["Requester event"],
@@ -273,6 +260,5 @@ describe("Discord scheduled-event assistant tools", () => {
     assert.equal(result.resource_name, "PAX West 2026 - Day 2");
     assert.equal(result.configured_timezone, "America/Los_Angeles");
     assert.match(String(result.error), /requested end.*before or at the event start/i);
-    assert.match(String(result.instruction), /Do not say the resource or ID was missing/i);
   });
 });

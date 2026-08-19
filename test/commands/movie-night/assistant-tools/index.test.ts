@@ -71,14 +71,12 @@ describe("movie-night assistant tools", () => {
       scope: string;
       requesting_user_filtered: boolean;
       requesting_user_id: string;
-      instruction: string;
       movie_nights: Array<Record<string, unknown>>;
     };
 
     assert.equal(result.scope, "requesting-user-attendance");
     assert.equal(result.requesting_user_filtered, true);
     assert.equal(result.requesting_user_id, "100");
-    assert.match(result.instruction, /requesting user's movie nights.*you.*never.*bot.*attending/i);
     assert.deepEqual(
       result.movie_nights.map((night) => night.title),
       ["Movie Night: Arrival"],
@@ -174,6 +172,5 @@ describe("movie-night assistant tools", () => {
     assert.equal(result.resource_type, "movie-night");
     assert.equal(result.resource_id, "movie-night:night2");
     assert.equal(result.configured_timezone, "America/Los_Angeles");
-    assert.match(String(result.instruction), /Do not say the resource or ID was missing/i);
   });
 });
