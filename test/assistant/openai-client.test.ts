@@ -277,27 +277,30 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(requests[1]?.tools, undefined);
   });
 
-  it("does not expose or execute a tool name emitted as a pseudo-call", async () => {
+  it("repairs a tool name emitted as a pseudo-call into a native call", async () => {
     const requests: Array<Record<string, unknown>> = [];
     let executions = 0;
 
     globalThis.fetch = async (_input, init) => {
       requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
 
-      return new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content:
-                  requests.length === 1
-                    ? "I will look that up.\n\nlist_my_upcoming_events(limit=10)"
-                    : "I couldn't complete the lookup.",
-              },
-            },
-          ],
-        }),
-      );
+      const message =
+        requests.length === 1
+          ? { content: "I will look that up.\n\ntool_use: function=list_my_upcoming_events(limit=10)" }
+          : requests.length === 2
+            ? {
+                content: null,
+                tool_calls: [
+                  {
+                    id: "repaired-call",
+                    type: "function",
+                    function: { name: "list_my_upcoming_events", arguments: '{"limit":10}' },
+                  },
+                ],
+              }
+            : { content: "Lookup complete." };
+
+      return new Response(JSON.stringify({ choices: [{ message }] }));
     };
     const lookup: AssistantTool = {
       name: "list_my_upcoming_events",
@@ -310,13 +313,46 @@ describe("OpenAICompatibleClient", () => {
       },
     };
 
-    assert.equal(
-      await client().respond("Edit PAX day 2", context, [lookup], "System"),
-      "I couldn't complete the lookup.",
-    );
+    assert.equal(await client().respond("Edit PAX day 2", context, [lookup], "System"), "Lookup complete.");
+    assert.equal(executions, 1);
+    assert.equal(requests.length, 3);
+    assert.ok(requests[1]?.tools);
+    assert.equal(requests[1]?.tool_choice, "required");
+  });
+
+  it("fails closed when a pseudo-call cannot be repaired", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    let executions = 0;
+
+    globalThis.fetch = async (_input, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: "tool_use: function=list_upcoming_events(limit=50)\ntool_result: fabricated",
+              },
+            },
+          ],
+        }),
+      );
+    };
+    const lookup: AssistantTool = {
+      name: "list_upcoming_events",
+      description: "List events",
+      parameters: { type: "object" },
+      async execute() {
+        executions += 1;
+
+        return "Events";
+      },
+    };
+
+    await assert.rejects(client().respond("Edit PAX day 2", context, [lookup], "System"), /unexecuted tool call/i);
     assert.equal(executions, 0);
     assert.equal(requests.length, 2);
-    assert.equal(requests[1]?.tools, undefined);
   });
 
   it("does not advertise unavailable tools to the provider", async () => {

@@ -17,7 +17,7 @@ export function createMovieNightListTools({
         type: "object",
         additionalProperties: false,
         properties: {
-          limit: { type: "integer", minimum: 1, maximum: 25, description: "Defaults to 10" },
+          limit: { type: "integer", minimum: 1, maximum: 50, description: "Defaults to 10" },
         },
       },
       async execute(context, value) {
@@ -44,7 +44,7 @@ export function createMovieNightListTools({
         additionalProperties: false,
         properties: {
           include_maybe: { type: "boolean", description: "Defaults to false" },
-          limit: { type: "integer", minimum: 1, maximum: 25, description: "Defaults to 10" },
+          limit: { type: "integer", minimum: 1, maximum: 50, description: "Defaults to 10" },
         },
       },
       async execute(context, value) {

@@ -21,7 +21,7 @@ export function createEventListTools(visible: VisibleEvents): AssistantTool[] {
         type: "object",
         additionalProperties: false,
         properties: {
-          limit: { type: "integer", minimum: 1, maximum: 25, description: "Defaults to 10" },
+          limit: { type: "integer", minimum: 1, maximum: 50, description: "Defaults to 10" },
         },
       },
       async execute(context, value) {
@@ -46,7 +46,7 @@ export function createEventListTools(visible: VisibleEvents): AssistantTool[] {
         additionalProperties: false,
         properties: {
           include_maybe: { type: "boolean", description: "Include bot-managed Maybe RSVPs; defaults to false" },
-          limit: { type: "integer", minimum: 1, maximum: 25, description: "Defaults to 10" },
+          limit: { type: "integer", minimum: 1, maximum: 50, description: "Defaults to 10" },
         },
       },
       async execute(context, value) {

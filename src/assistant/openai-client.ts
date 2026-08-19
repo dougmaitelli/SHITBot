@@ -6,7 +6,7 @@ import type { AssistantTool, AssistantToolContext } from "./types.js";
 const MAX_TOOL_RESULT_CHARACTERS = 16_000;
 const MAX_TOOL_CALLS = 20;
 const toolProtocolPattern =
-  /(?:"(?:arguments|tool_calls?|function)"\s*:|<\/?(?:tool_call|function_call)>|\[(?:TOOL|FUNCTION)_CALLS?\])/i;
+  /(?:"(?:arguments|tool_calls?|function)"\s*:|<\/?(?:tool_call|function_call)>|\[(?:TOOL|FUNCTION)_CALLS?\]|\btool_(?:use|result)\s*:|\bfunction\s*=)/i;
 
 export interface OpenAICompatibleConfig {
   apiKey?: string;
@@ -33,7 +33,7 @@ function exposesToolProtocol(text: string, toolNames: string[]): boolean {
 
   // Some models print a Python-like pseudo-call instead of using the provider's
   // native tool-call field. It was not executed, so never expose it as success.
-  return new RegExp(`(?:^|\\s)(?:${toolNames.map(escapeRegExp).join("|")})\\s*\\(`, "i").test(text);
+  return new RegExp(`(?:^|[^a-z0-9_])(?:${toolNames.map(escapeRegExp).join("|")})\\s*\\(`, "i").test(text);
 }
 
 export class OpenAICompatibleClient {
@@ -62,6 +62,7 @@ export class OpenAICompatibleClient {
     }
 
     let toolCallsUsed = 0;
+    let actionToolExecuted = false;
     const sdkTools: ToolSet = Object.fromEntries(
       availableTools.map((candidate) => [
         candidate.name,
@@ -70,6 +71,7 @@ export class OpenAICompatibleClient {
           inputSchema: jsonSchema(candidate.parameters),
           async execute(input: unknown) {
             toolCallsUsed += 1;
+            actionToolExecuted ||= /^(?:create|edit|delete|send|schedule|post)_/.test(candidate.name);
 
             if (toolCallsUsed > MAX_TOOL_CALLS)
               return "Tool limit reached. Do not call more tools; explain this to the user.";
@@ -130,13 +132,26 @@ export class OpenAICompatibleClient {
     const toolNames = availableTools.map(({ name }) => name);
 
     if (exposesToolProtocol(text, toolNames)) {
-      const retry = await generateText({
-        model: this.model,
-        system: `${systemPrompt} The preceding assistant text contained tool protocol or a pseudo-call that was not executed. Provide only a natural-language answer, do not call tools, and do not claim that any unexecuted action succeeded.`,
-        messages: [{ role: "user", content: prompt }, ...result.responseMessages] as ModelMessage[],
-        maxOutputTokens: this.config.maxOutputTokens,
-        abortSignal: AbortSignal.timeout(this.config.timeoutMs),
-      });
+      const retry =
+        actionToolExecuted || availableTools.length === 0
+          ? await generateText({
+              model: this.model,
+              system: `${systemPrompt} The preceding assistant text contained tool protocol or a pseudo-call that was not executed. Provide only a natural-language answer, do not call tools, and do not claim that any unexecuted action succeeded.`,
+              messages: [{ role: "user", content: prompt }, ...result.responseMessages] as ModelMessage[],
+              maxOutputTokens: this.config.maxOutputTokens,
+              abortSignal: AbortSignal.timeout(this.config.timeoutMs),
+            })
+          : await generateText({
+              model: this.model,
+              system: `${systemPrompt} The preceding assistant text contained a pseudo-call that was not executed. Continue the original request now by emitting a real native tool call. Never invent or print a tool result.`,
+              messages: [{ role: "user", content: prompt }, ...result.responseMessages] as ModelMessage[],
+              tools: sdkTools,
+              toolChoice: "required",
+              prepareStep: ({ stepNumber }) => (stepNumber > 0 ? { toolChoice: "auto" } : undefined),
+              stopWhen: [stepCountIs(MAX_TOOL_CALLS), () => toolCallsUsed >= MAX_TOOL_CALLS],
+              maxOutputTokens: this.config.maxOutputTokens,
+              abortSignal: AbortSignal.timeout(this.config.timeoutMs),
+            });
 
       text = retry.text.trim();
 

@@ -10,8 +10,8 @@ export function objectArguments(value: unknown): Record<string, unknown> {
 export function requestedLimit(value: unknown): number {
   if (value === undefined) return 10;
 
-  if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 25)
-    throw new Error("Limit must be from 1 to 25.");
+  if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 50)
+    throw new Error("Limit must be from 1 to 50.");
 
   return value as number;
 }
