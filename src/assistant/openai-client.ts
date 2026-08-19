@@ -70,7 +70,6 @@ export class OpenAICompatibleClient {
     }
 
     let toolCallsUsed = 0;
-    let actionToolExecuted = false;
     const sdkTools: ToolSet = Object.fromEntries(
       availableTools.map((candidate) => [
         candidate.name,
@@ -79,7 +78,6 @@ export class OpenAICompatibleClient {
           inputSchema: jsonSchema(candidate.parameters),
           async execute(input: unknown) {
             toolCallsUsed += 1;
-            actionToolExecuted ||= /^(?:create|edit|delete|send|schedule|post)_/.test(candidate.name);
 
             if (toolCallsUsed > MAX_TOOL_CALLS)
               return "Tool limit reached. Do not call more tools; explain this to the user.";
@@ -146,35 +144,8 @@ export class OpenAICompatibleClient {
     text ||= "I don't have a response for that.";
     const toolNames = availableTools.map(({ name }) => name);
 
-    if (exposesToolProtocol(text, toolNames)) {
-      const retry =
-        actionToolExecuted || availableTools.length === 0
-          ? await generateText({
-              model: this.model,
-              system: `${systemPrompt} The preceding assistant text contained tool protocol or a pseudo-call that was not executed. Provide only a natural-language answer, do not call tools, and do not claim that any unexecuted action succeeded.`,
-              messages: [{ role: "user", content: prompt }, ...result.responseMessages.slice(0, -1)] as ModelMessage[],
-              temperature: 0,
-              maxOutputTokens: this.config.maxOutputTokens,
-              abortSignal: AbortSignal.timeout(this.config.timeoutMs),
-            })
-          : await generateText({
-              model: this.model,
-              system: `${systemPrompt} The preceding assistant text contained a pseudo-call that was not executed. Continue the original request now by emitting a real native tool call. Never invent or print a tool result.`,
-              prompt,
-              tools: sdkTools,
-              toolChoice: "required",
-              prepareStep: ({ stepNumber }) => (stepNumber > 0 ? { toolChoice: "auto" } : undefined),
-              stopWhen: [stepCountIs(MAX_TOOL_CALLS), () => toolCallsUsed >= MAX_TOOL_CALLS],
-              temperature: 0,
-              maxOutputTokens: this.config.maxOutputTokens,
-              abortSignal: AbortSignal.timeout(this.config.timeoutMs),
-            });
-
-      text = retry.text.trim();
-
-      if (!text || exposesToolProtocol(text, toolNames))
-        throw new Error("The AI provider returned an unexecuted tool call as visible text.");
-    }
+    if (exposesToolProtocol(text, toolNames))
+      throw new Error("The AI provider returned an unexecuted tool call as visible text.");
 
     return text;
   }

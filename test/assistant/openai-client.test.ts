@@ -253,7 +253,7 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(requests[20]?.tools, undefined);
   });
 
-  it("retries instead of exposing tool protocol emitted as text", async () => {
+  it("fails closed instead of exposing tool protocol emitted as text", async () => {
     const requests: Array<Record<string, unknown>> = [];
 
     globalThis.fetch = async (_input, init) => {
@@ -264,8 +264,7 @@ describe("OpenAICompatibleClient", () => {
           choices: [
             {
               message: {
-                content:
-                  requests.length === 1 ? '{"tool_calls":[{"function":{"arguments":"{}"}}]}' : "A normal answer.",
+                content: '{"tool_calls":[{"function":{"arguments":"{}"}}]}',
               },
             },
           ],
@@ -273,123 +272,11 @@ describe("OpenAICompatibleClient", () => {
       );
     };
 
-    assert.equal(await client().respond("General knowledge question", context, [], "System"), "A normal answer.");
-    assert.equal(requests.length, 2);
-    assert.equal(requests[1]?.tools, undefined);
-  });
-
-  it("repairs tool_use function syntax emitted after a think block into native calls", async () => {
-    const requests: Array<Record<string, unknown>> = [];
-    const executions: string[] = [];
-
-    globalThis.fetch = async (_input, init) => {
-      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-
-      const message =
-        requests.length === 1
-          ? {
-              content:
-                "I need to find the event ID.\n\ntool_use(name=list_upcoming_events, args={})\n</think>\n\ntool_use(name=list_upcoming_events, args={})",
-            }
-          : requests.length === 2
-            ? {
-                content: null,
-                tool_calls: [
-                  {
-                    id: "repaired-call",
-                    type: "function",
-                    function: { name: "list_upcoming_events", arguments: "{}" },
-                  },
-                ],
-              }
-            : requests.length === 3
-              ? {
-                  content: null,
-                  tool_calls: [
-                    {
-                      id: "edit-call",
-                      type: "function",
-                      function: {
-                        name: "edit_event",
-                        arguments: '{"event_id":"event:pax-day-2","description":"Expo Hall: 10am–6pm"}',
-                      },
-                    },
-                  ],
-                }
-              : { content: "Updated PAX West day 2." };
-
-      return new Response(JSON.stringify({ choices: [{ message }] }));
-    };
-    const lookup: AssistantTool = {
-      name: "list_upcoming_events",
-      description: "List events",
-      parameters: { type: "object" },
-      async execute() {
-        executions.push("list");
-
-        return '{"events":[{"id":"event:pax-day-2","title":"PAX West day 2"}]}';
-      },
-    };
-    const edit: AssistantTool = {
-      name: "edit_event",
-      description: "Edit event",
-      parameters: { type: "object" },
-      async execute() {
-        executions.push("edit");
-
-        return "Updated";
-      },
-    };
-
-    assert.equal(
-      await client().respond("Edit PAX day 2", context, [lookup, edit], "System"),
-      "Updated PAX West day 2.",
+    await assert.rejects(
+      client().respond("General knowledge question", context, [], "System"),
+      /unexecuted tool call/i,
     );
-    assert.deepEqual(executions, ["list", "edit"]);
-    assert.equal(requests.length, 4);
-    assert.ok(requests[1]?.tools);
-    assert.equal(requests[1]?.tool_choice, "required");
-    const repairMessages = requests[1]?.messages as Array<{ content?: string; role: string }>;
-
-    assert.equal(
-      repairMessages.some(({ content }) => content?.includes("tool_use:") ?? false),
-      false,
-    );
-  });
-
-  it("fails closed when a pseudo-call cannot be repaired", async () => {
-    const requests: Array<Record<string, unknown>> = [];
-    let executions = 0;
-
-    globalThis.fetch = async (_input, init) => {
-      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-
-      return new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content: "tool_use: function=list_upcoming_events(limit=50)\ntool_result: fabricated",
-              },
-            },
-          ],
-        }),
-      );
-    };
-    const lookup: AssistantTool = {
-      name: "list_upcoming_events",
-      description: "List events",
-      parameters: { type: "object" },
-      async execute() {
-        executions += 1;
-
-        return "Events";
-      },
-    };
-
-    await assert.rejects(client().respond("Edit PAX day 2", context, [lookup], "System"), /unexecuted tool call/i);
-    assert.equal(executions, 0);
-    assert.equal(requests.length, 2);
+    assert.equal(requests.length, 1);
   });
 
   it("does not advertise unavailable tools to the provider", async () => {
