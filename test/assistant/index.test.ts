@@ -1,64 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { Collection, type Message } from "discord.js";
-import { boundedReply, currentTimeContext, mentionsBot, promptFromMention } from "../../src/assistant/index.js";
-
-function messageWithMentions({
-  content = "",
-  users = [],
-  roles = [],
-}: {
-  content?: string;
-  users?: string[];
-  roles?: { id: string; botId?: string }[];
-}): Message {
-  return {
-    content,
-    mentions: {
-      users: new Collection(users.map((id) => [id, { id }])),
-      roles: new Collection(roles.map(({ id, botId }) => [id, { id, tags: botId ? { botId } : null }])),
-    },
-  } as unknown as Message;
-}
-
-describe("mentionsBot", () => {
-  it("accepts a direct user mention", () => {
-    assert.equal(mentionsBot(messageWithMentions({ users: ["bot-id"] }), "bot-id"), true);
-  });
-
-  it("accepts the bot's managed role mention", () => {
-    assert.equal(mentionsBot(messageWithMentions({ roles: [{ id: "role-id", botId: "bot-id" }] }), "bot-id"), true);
-  });
-
-  it("rejects roles that are not managed by the bot", () => {
-    assert.equal(
-      mentionsBot(
-        messageWithMentions({
-          roles: [{ id: "ordinary-role" }, { id: "other-bot-role", botId: "other-bot" }],
-        }),
-        "bot-id",
-      ),
-      false,
-    );
-  });
-});
-
-describe("promptFromMention", () => {
-  it("removes a direct bot mention", () => {
-    const message = messageWithMentions({ content: "<@bot-id> when is movie night?", users: ["bot-id"] });
-
-    assert.equal(promptFromMention(message, "bot-id"), "when is movie night?");
-  });
-
-  it("removes the bot's managed role mention", () => {
-    const message = messageWithMentions({
-      content: "<@&role-id> when is movie night?",
-      roles: [{ id: "role-id", botId: "bot-id" }],
-    });
-
-    assert.equal(promptFromMention(message, "bot-id"), "when is movie night?");
-  });
-});
+import { boundedReply, currentTimeContext } from "../../src/assistant/index.js";
 
 describe("boundedReply", () => {
   it("leaves responses within the limit unchanged", () => {

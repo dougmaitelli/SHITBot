@@ -16,20 +16,8 @@ export interface AssistantConfig extends OpenAICompatibleConfig {
   timeZone: string;
 }
 
-export function promptFromMention(message: Message, botId: string): string {
-  let prompt = message.content.replace(new RegExp(`<@!?${botId}>`, "g"), "");
-
-  for (const role of message.mentions.roles.values()) {
-    if (role.tags?.botId === botId) prompt = prompt.replaceAll(`<@&${role.id}>`, "");
-  }
-
-  return prompt.trim();
-}
-
-export function mentionsBot(message: Message, botId: string): boolean {
-  if (message.mentions.users.has(botId)) return true;
-
-  return message.mentions.roles.some((role) => role.tags?.botId === botId);
+function promptFromMention(message: Message, botId: string): string {
+  return message.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
 }
 
 export function boundedReply(value: string, maxCharacters: number): string {
@@ -63,7 +51,7 @@ export function startAssistant(client: Client, tools: AssistantTool[], config: A
   const activeUsers = new Set<string>();
 
   const handleMessage = async (message: Message): Promise<void> => {
-    if (!client.user || message.author.bot || !message.inGuild() || !mentionsBot(message, client.user.id)) return;
+    if (!client.user || message.author.bot || !message.inGuild() || !message.mentions.users.has(client.user.id)) return;
 
     const prompt = promptFromMention(message, client.user.id);
     const request = {

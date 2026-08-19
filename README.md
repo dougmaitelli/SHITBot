@@ -26,8 +26,7 @@ SHITBot is a Discord bot for coordinating movie nights and other events. It supp
 3. On **OAuth2 > URL Generator**, select the `bot` and `applications.commands` scopes.
 4. Select these bot permissions: **View Channels**, **Send Messages**, **Embed Links**, and **Read Message History**.
 5. Open the generated URL and add the bot to your server.
-6. If using the mention-based AI assistant, enable the privileged **Message Content Intent** on the application's **Bot** page.
-7. Enable Developer Mode in Discord, then right-click your server and choose **Copy Server ID**.
+6. Enable Developer Mode in Discord, then right-click your server and choose **Copy Server ID**.
 
 ### Required Discord permissions
 
@@ -47,9 +46,9 @@ Grant the bot role these permissions:
 - **Create Events** lets it integrate with Discord scheduled events.
 - **Mention Everyone** lets it notify `@everyone`, `@here`, and otherwise non-mentionable roles when coordination requires it.
 
-The mention-based AI assistant uses the **Guild Messages** and privileged **Message Content** gateway intents. Message Content is required because mentioning the bot's managed role does not count as directly mentioning the application for Discord's message-content exception. The assistant accepts either a direct bot-user mention or the bot's own managed role; mentioning any other role does not invoke it.
+The mention-based AI assistant uses the non-privileged **Guild Messages** gateway intent. Discord exposes message content when the bot is directly mentioned, so the privileged **Message Content** intent is not required for this interaction style.
 
-Channel-specific permission overrides still apply. Grant these permissions in `#movie-nights` and in any other channel where the bot should be able to send messages. The bot does not need **Administrator**, **Manage Messages**, **Add Reactions**, or any privileged gateway intents other than **Message Content**.
+Channel-specific permission overrides still apply. Grant these permissions in `#movie-nights` and in any other channel where the bot should be able to send messages. The bot does not need **Administrator**, **Manage Messages**, **Add Reactions**, or any privileged gateway intents.
 
 ## Run locally
 
