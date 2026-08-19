@@ -185,7 +185,13 @@ async function registerCommands(config: BotConfig, commandModules: CommandModule
 
 export async function startBot(config: BotConfig): Promise<void> {
   const store = new BotStore(config.dataFile);
-  const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+  const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages];
+
+  if (config.assistant) intents.push(GatewayIntentBits.MessageContent);
+
+  const client = new Client({
+    intents,
+  });
 
   startHealthServer(client, config.healthPort);
   startDiscordHealthMonitor(client, config.discordUnreadyExitMs, config.heartbeatMs);
