@@ -34,8 +34,10 @@ describe("assistant tool-use instructions", () => {
     assert.match(TOOL_USE_INSTRUCTIONS, /never invent, pluralize, rename, or reformat/i);
   });
 
-  it("resolves named edit targets through list tools before editing by ID", () => {
+  it("resolves named edit targets through title matches before editing by ID", () => {
     assert.match(TOOL_USE_INSTRUCTIONS, /edit identifies events by name.*first call.*list tool/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /only against each result's title field/i);
+    assert.match(TOOL_USE_INSTRUCTIONS, /ignore descriptions, details, and locations/i);
     assert.match(TOOL_USE_INSTRUCTIONS, /edit tool once for each resolved ID/i);
     assert.match(TOOL_USE_INSTRUCTIONS, /never ask the user for IDs.*list tool can provide/i);
   });

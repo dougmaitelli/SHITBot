@@ -17,7 +17,7 @@ export function createEventEditTool({
   return {
     name: "edit_event",
     description:
-      "Edit exactly one future bot-managed non-movie event by its stable ID. If the user identifies one or more events by name instead of ID, call list_upcoming_events first, select only the exact intended managed event IDs from those results, and call edit_event once per ID. Only the organizer or a moderator may edit it.",
+      "Edit exactly one future bot-managed non-movie event by its stable ID. If the user identifies one or more events by name instead of ID, call list_upcoming_events first, match only against each result's title field and never its details, select only the exact intended managed event IDs, and call edit_event once per ID. Only the organizer or a moderator may edit it.",
     parameters: {
       type: "object",
       additionalProperties: false,
