@@ -9,6 +9,7 @@ import {
   type Interaction,
 } from "discord.js";
 import { startAssistant, type AssistantConfig } from "./assistant/index.js";
+import { deleteExpiredRecords, startCleanupJob } from "./cleanup.js";
 import { loadCommandFactories } from "./commands/load.js";
 import { startDiscordHealthMonitor, startHealthServer } from "./discord-health.js";
 import { logger } from "./logger.js";
@@ -146,9 +147,14 @@ function registerReadyHandler(client: Client, store: BotStore, commandModules: C
           guildCount: readyClient.guilds.cache.size,
         });
 
+        const deleted = await deleteExpiredRecords(store);
+
+        if (deleted.events || deleted.movieNights) logger.info("Deleted expired records", deleted);
+
         for (const command of commandModules) await command.onReady?.();
 
         startReminderJob(client, store);
+        startCleanupJob(store);
         logger.info("Background jobs started");
       } catch (error) {
         logger.fatal("Ready initialization failed", { error });

@@ -112,7 +112,7 @@ npm run build
 npm run start:prod
 ```
 
-The default data file is `data/movie-nights.json`. Back it up or mount that directory as persistent storage when deploying in a container. Set `DATA_FILE` to change its location.
+The default data file is `data/shitbot.json`. On first startup after upgrading, the bot automatically renames a legacy `movie-nights.json` file in the same directory. Back up or mount that directory as persistent storage when deploying in a container. Set `DATA_FILE` to change its location.
 
 ### Docker
 

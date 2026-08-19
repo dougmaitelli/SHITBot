@@ -38,7 +38,7 @@ const config: BotConfig = {
   token: requiredEnv("DISCORD_TOKEN"),
   clientId: requiredEnv("DISCORD_CLIENT_ID"),
   guildId: process.env.DISCORD_GUILD_ID,
-  dataFile: process.env.DATA_FILE ?? "./data/movie-nights.json",
+  dataFile: process.env.DATA_FILE ?? "./data/shitbot.json",
   healthPort: positiveIntegerEnv("HEALTH_PORT", 3000),
   discordUnreadyExitMs: positiveIntegerEnv("DISCORD_UNREADY_EXIT_MS", 5 * 60_000),
   heartbeatMs: positiveIntegerEnv("BOT_HEARTBEAT_MS", 5 * 60_000),
