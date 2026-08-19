@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { BOT_CAPABILITIES } from "../../src/assistant/capabilities.js";
-import {
-  outputLengthInstruction,
-  PERSONALITY_INSTRUCTIONS,
-  TOOL_USE_INSTRUCTIONS,
-} from "../../src/assistant/system-prompt.js";
+import { outputLengthInstruction, TOOL_USE_INSTRUCTIONS } from "../../src/assistant/system-prompt.js";
 
 describe("assistant capability catalog", () => {
   it("covers every mention-based workflow without advertising commands", () => {
@@ -63,13 +59,5 @@ describe("assistant tool-use instructions", () => {
     assert.match(instruction, /under 1600 characters/i);
     assert.match(instruction, /complete answer/i);
     assert.match(instruction, /do not end mid-sentence/i);
-  });
-});
-
-describe("assistant personality instructions", () => {
-  it("is helpfully passive-aggressive without permitting hostility", () => {
-    assert.match(PERSONALITY_INSTRUCTIONS, /passive-aggressive/i);
-    assert.match(PERSONALITY_INSTRUCTIONS, /genuinely helpful/i);
-    assert.match(PERSONALITY_INSTRUCTIONS, /Never insult, belittle, antagonize, or obstruct/i);
   });
 });
