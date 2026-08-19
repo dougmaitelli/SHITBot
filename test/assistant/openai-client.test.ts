@@ -111,7 +111,7 @@ describe("OpenAICompatibleClient", () => {
     const toolResult = finalMessages.filter((message) => message.role === "tool").at(-1);
 
     assert.equal(toolResult?.content, "Created Party");
-    assert.equal(finalMessages.at(-1)?.role, "system");
+    assert.equal(finalMessages.at(-1)?.role, "tool");
   });
 
   it("keeps edit tools available after listing IDs", async () => {
@@ -199,9 +199,7 @@ describe("OpenAICompatibleClient", () => {
       secondTools.map((tool) => tool.function.name),
       ["list_upcoming_events", "edit_event"],
     );
-    assert.equal(secondMessages.at(-1)?.role, "system");
-    assert.match(secondMessages.at(-1)?.content ?? "", /tools still available are:.*edit_event/i);
-    assert.match(secondMessages.at(-1)?.content ?? "", /Do not stop after the lookup/i);
+    assert.equal(secondMessages.at(-1)?.role, "tool");
   });
 
   it("stops advertising tools after twenty tool calls", async () => {
@@ -275,6 +273,48 @@ describe("OpenAICompatibleClient", () => {
     };
 
     assert.equal(await client().respond("General knowledge question", context, [], "System"), "A normal answer.");
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1]?.tools, undefined);
+  });
+
+  it("does not expose or execute a tool name emitted as a pseudo-call", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    let executions = 0;
+
+    globalThis.fetch = async (_input, init) => {
+      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content:
+                  requests.length === 1
+                    ? "I will look that up.\n\nlist_my_upcoming_events(limit=10)"
+                    : "I couldn't complete the lookup.",
+              },
+            },
+          ],
+        }),
+      );
+    };
+    const lookup: AssistantTool = {
+      name: "list_my_upcoming_events",
+      description: "List events",
+      parameters: { type: "object" },
+      async execute() {
+        executions += 1;
+
+        return "Events";
+      },
+    };
+
+    assert.equal(
+      await client().respond("Edit PAX day 2", context, [lookup], "System"),
+      "I couldn't complete the lookup.",
+    );
+    assert.equal(executions, 0);
     assert.equal(requests.length, 2);
     assert.equal(requests[1]?.tools, undefined);
   });

@@ -21,6 +21,8 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.31",
+    "ai": "^7.0.68",
     "chrono-node": "^2.10.1",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
