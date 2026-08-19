@@ -40,6 +40,7 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(request.url, "https://provider.example/v1/chat/completions");
     assert.equal(request.authorization, "Bearer secret");
     assert.equal(request.body?.model, "model");
+    assert.equal(request.body?.temperature, 0);
     assert.equal(request.body?.tools, undefined);
   });
 
@@ -318,6 +319,12 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(requests.length, 3);
     assert.ok(requests[1]?.tools);
     assert.equal(requests[1]?.tool_choice, "required");
+    const repairMessages = requests[1]?.messages as Array<{ content?: string; role: string }>;
+
+    assert.equal(
+      repairMessages.some(({ content }) => content?.includes("tool_use:") ?? false),
+      false,
+    );
   });
 
   it("fails closed when a pseudo-call cannot be repaired", async () => {

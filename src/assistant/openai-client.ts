@@ -36,6 +36,14 @@ function exposesToolProtocol(text: string, toolNames: string[]): boolean {
   return new RegExp(`(?:^|[^a-z0-9_])(?:${toolNames.map(escapeRegExp).join("|")})\\s*\\(`, "i").test(text);
 }
 
+function responseFingerprint(body: unknown): string | undefined {
+  if (!body || typeof body !== "object") return undefined;
+
+  const fingerprint = (body as Record<string, unknown>).system_fingerprint;
+
+  return typeof fingerprint === "string" ? fingerprint : undefined;
+}
+
 export class OpenAICompatibleClient {
   private readonly model;
 
@@ -96,14 +104,20 @@ export class OpenAICompatibleClient {
       prompt,
       tools: sdkTools,
       stopWhen: [stepCountIs(MAX_TOOL_CALLS), () => toolCallsUsed >= MAX_TOOL_CALLS],
+      temperature: 0,
       maxOutputTokens: this.config.maxOutputTokens,
       abortSignal: AbortSignal.timeout(this.config.timeoutMs),
-      onStepEnd({ toolCalls }) {
-        if (toolCalls.length > 0)
-          logger.info("LLM requested tools", {
-            model: modelName,
-            tools: toolCalls.map((call) => call.toolName),
-          });
+      onStepEnd({ finishReason, rawFinishReason, response, toolCalls, warnings }) {
+        logger.info("LLM step completed", {
+          model: modelName,
+          responseModel: response.modelId,
+          responseId: response.id,
+          systemFingerprint: responseFingerprint(response.body),
+          finishReason,
+          rawFinishReason,
+          tools: toolCalls.map((call) => call.toolName),
+          warningCount: warnings?.length ?? 0,
+        });
       },
     });
 
@@ -121,6 +135,7 @@ export class OpenAICompatibleClient {
         model: this.model,
         system: `${systemPrompt} The tool limit has been reached. Provide a concise final answer without calling tools.`,
         messages: [{ role: "user", content: prompt }, ...result.responseMessages] as ModelMessage[],
+        temperature: 0,
         maxOutputTokens: this.config.maxOutputTokens,
         abortSignal: AbortSignal.timeout(this.config.timeoutMs),
       });
@@ -137,18 +152,20 @@ export class OpenAICompatibleClient {
           ? await generateText({
               model: this.model,
               system: `${systemPrompt} The preceding assistant text contained tool protocol or a pseudo-call that was not executed. Provide only a natural-language answer, do not call tools, and do not claim that any unexecuted action succeeded.`,
-              messages: [{ role: "user", content: prompt }, ...result.responseMessages] as ModelMessage[],
+              messages: [{ role: "user", content: prompt }, ...result.responseMessages.slice(0, -1)] as ModelMessage[],
+              temperature: 0,
               maxOutputTokens: this.config.maxOutputTokens,
               abortSignal: AbortSignal.timeout(this.config.timeoutMs),
             })
           : await generateText({
               model: this.model,
               system: `${systemPrompt} The preceding assistant text contained a pseudo-call that was not executed. Continue the original request now by emitting a real native tool call. Never invent or print a tool result.`,
-              messages: [{ role: "user", content: prompt }, ...result.responseMessages] as ModelMessage[],
+              prompt,
               tools: sdkTools,
               toolChoice: "required",
               prepareStep: ({ stepNumber }) => (stepNumber > 0 ? { toolChoice: "auto" } : undefined),
               stopWhen: [stepCountIs(MAX_TOOL_CALLS), () => toolCallsUsed >= MAX_TOOL_CALLS],
+              temperature: 0,
               maxOutputTokens: this.config.maxOutputTokens,
               abortSignal: AbortSignal.timeout(this.config.timeoutMs),
             });
