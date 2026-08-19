@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { dirname } from "node:path";
 import type { CommunityEvent } from "./commands/event/types.js";
 import type { MovieNight } from "./commands/movie-night/types.js";
 import type { EventReminder } from "./reminders/types.js";
@@ -19,42 +19,21 @@ export class BotStore {
   constructor(private readonly filename: string) {}
 
   async load(): Promise<void> {
-    let contents: string;
-
     try {
-      contents = await readFile(this.filename, "utf8");
+      const saved = JSON.parse(await readFile(this.filename, "utf8")) as Partial<StoreData>;
+
+      this.data = {
+        schemaVersion: 2,
+        nights: saved.nights ?? {},
+        events: saved.events ?? {},
+        reminders: saved.reminders ?? {},
+        greaseLastUsedAt: saved.greaseLastUsedAt,
+      };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 
-      if (basename(this.filename) !== "shitbot.json") {
-        await this.save();
-
-        return;
-      }
-
-      const legacyFilename = join(dirname(this.filename), "movie-nights.json");
-
-      try {
-        await rename(legacyFilename, this.filename);
-        contents = await readFile(this.filename, "utf8");
-      } catch (legacyError) {
-        if ((legacyError as NodeJS.ErrnoException).code !== "ENOENT") throw legacyError;
-
-        await this.save();
-
-        return;
-      }
+      await this.save();
     }
-
-    const saved = JSON.parse(contents) as Partial<StoreData>;
-
-    this.data = {
-      schemaVersion: 2,
-      nights: saved.nights ?? {},
-      events: saved.events ?? {},
-      reminders: saved.reminders ?? {},
-      greaseLastUsedAt: saved.greaseLastUsedAt,
-    };
   }
 
   get(id: string): MovieNight | undefined {
