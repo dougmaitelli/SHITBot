@@ -278,16 +278,19 @@ describe("OpenAICompatibleClient", () => {
     assert.equal(requests[1]?.tools, undefined);
   });
 
-  it("repairs a tool name emitted as a pseudo-call into a native call", async () => {
+  it("repairs tool_use function syntax emitted after a think block into native calls", async () => {
     const requests: Array<Record<string, unknown>> = [];
-    let executions = 0;
+    const executions: string[] = [];
 
     globalThis.fetch = async (_input, init) => {
       requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
 
       const message =
         requests.length === 1
-          ? { content: "I will look that up.\n\ntool_use: function=list_my_upcoming_events(limit=10)" }
+          ? {
+              content:
+                "I need to find the event ID.\n\ntool_use(name=list_upcoming_events, args={})\n</think>\n\ntool_use(name=list_upcoming_events, args={})",
+            }
           : requests.length === 2
             ? {
                 content: null,
@@ -295,28 +298,55 @@ describe("OpenAICompatibleClient", () => {
                   {
                     id: "repaired-call",
                     type: "function",
-                    function: { name: "list_my_upcoming_events", arguments: '{"limit":10}' },
+                    function: { name: "list_upcoming_events", arguments: "{}" },
                   },
                 ],
               }
-            : { content: "Lookup complete." };
+            : requests.length === 3
+              ? {
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "edit-call",
+                      type: "function",
+                      function: {
+                        name: "edit_event",
+                        arguments: '{"event_id":"event:pax-day-2","description":"Expo Hall: 10am–6pm"}',
+                      },
+                    },
+                  ],
+                }
+              : { content: "Updated PAX West day 2." };
 
       return new Response(JSON.stringify({ choices: [{ message }] }));
     };
     const lookup: AssistantTool = {
-      name: "list_my_upcoming_events",
+      name: "list_upcoming_events",
       description: "List events",
       parameters: { type: "object" },
       async execute() {
-        executions += 1;
+        executions.push("list");
 
-        return "Events";
+        return '{"events":[{"id":"event:pax-day-2","title":"PAX West day 2"}]}';
+      },
+    };
+    const edit: AssistantTool = {
+      name: "edit_event",
+      description: "Edit event",
+      parameters: { type: "object" },
+      async execute() {
+        executions.push("edit");
+
+        return "Updated";
       },
     };
 
-    assert.equal(await client().respond("Edit PAX day 2", context, [lookup], "System"), "Lookup complete.");
-    assert.equal(executions, 1);
-    assert.equal(requests.length, 3);
+    assert.equal(
+      await client().respond("Edit PAX day 2", context, [lookup, edit], "System"),
+      "Updated PAX West day 2.",
+    );
+    assert.deepEqual(executions, ["list", "edit"]);
+    assert.equal(requests.length, 4);
     assert.ok(requests[1]?.tools);
     assert.equal(requests[1]?.tool_choice, "required");
     const repairMessages = requests[1]?.messages as Array<{ content?: string; role: string }>;
