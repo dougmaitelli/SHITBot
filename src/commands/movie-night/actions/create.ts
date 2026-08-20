@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { movieNightCalendarAttachment } from "../../../shared/calendar.js";
 import { renderNight } from "../renderers/night.js";
 import { createScheduledEvent, deleteScheduledEvent } from "../scheduled-event.js";
 import type { ManagedMessage } from "../../../shared/managed-message.js";
 import type { BotStore } from "../../../store.js";
 import type { MovieNight } from "../types.js";
-import type { AttachmentPayload, Client, Guild } from "discord.js";
+import type { Client, Guild } from "discord.js";
 
 export interface CreateMovieNightInput {
   guild: Guild;
@@ -18,9 +17,7 @@ export interface CreateMovieNightInput {
   durationMinutes: number;
 }
 
-type SendNightMessage = (
-  options: ReturnType<typeof renderNight> & { files?: AttachmentPayload[] },
-) => Promise<ManagedMessage>;
+type SendNightMessage = (options: ReturnType<typeof renderNight>) => Promise<ManagedMessage>;
 
 export async function createMovieNight(
   client: Client,
@@ -49,7 +46,7 @@ export async function createMovieNight(
   let message: Awaited<ReturnType<SendNightMessage>> | undefined;
 
   try {
-    message = await sendMessage({ ...renderNight(night), files: [movieNightCalendarAttachment(night)] });
+    message = await sendMessage(renderNight(night));
     night.messageId = message.id;
     await message.pin();
     await store.set(night);

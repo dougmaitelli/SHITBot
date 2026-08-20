@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addZonedDays, parseDate, parseDateOnly, parseEventEnd, parseTimeOnDate } from "../../src/utils/date-parser.js";
+import {
+  addZonedDays,
+  formatUtcDateTime,
+  parseDate,
+  parseDateOnly,
+  parseEventEnd,
+  parseTimeOnDate,
+} from "../../src/utils/date-parser.js";
 
 const referenceDate = new Date("2026-08-05T12:00:00.000Z");
 const losAngeles = "America/Los_Angeles";
@@ -12,6 +19,10 @@ function parse(input: string, timeZone = losAngeles): Date | null {
 }
 
 describe("parseDate", () => {
+  it("formats Unix seconds as a compact UTC date-time", () => {
+    assert.equal(formatUtcDateTime(1_788_629_400), "20260905T173000Z");
+  });
+
   it("interprets a natural-language time in the configured timezone", () => {
     assert.equal(parse("6 august 6pm")?.toISOString(), "2026-08-07T01:00:00.000Z");
   });

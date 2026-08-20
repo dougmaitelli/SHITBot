@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 import { buildRsvpButtons, buildRsvpFields } from "../../../shared/rsvp.js";
+import { movieNightCalendarUrl } from "../calendar.js";
 import { buildSuggestionField } from "./suggestion-search.js";
 import type { MovieNight } from "../types.js";
 
@@ -17,6 +18,12 @@ function buildEmbed(night: MovieNight, closed: boolean): EmbedBuilder {
       inline: true,
     });
   }
+
+  activityFields.unshift({
+    name: "Calendar",
+    value: `[Add to Google Calendar](${movieNightCalendarUrl(night)})`,
+    inline: true,
+  });
 
   if (night.votingOpen) activityFields.push(buildSuggestionField(night));
 

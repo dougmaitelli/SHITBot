@@ -16,7 +16,6 @@ describe("createCommunityEvent", () => {
   it("pins the managed event message before persisting it", async () => {
     const store = new BotStore(`/tmp/shitbot-event-create-${randomUUID()}.json`);
     let pinned = false;
-    let calendarFilename: string | undefined;
 
     await store.load();
     const event = await createCommunityEvent(
@@ -29,23 +28,18 @@ describe("createCommunityEvent", () => {
         name: "Community Picnic",
         schedule: { type: "timed", startsAt: 4_102_444_800, endsAt: 4_102_455_600 },
       },
-      async (options) => {
-        calendarFilename = options.files?.[0]?.name;
-
-        return {
-          id: "message",
-          async pin() {
-            pinned = true;
-          },
-          async delete() {},
-        };
-      },
+      async () => ({
+        id: "message",
+        async pin() {
+          pinned = true;
+        },
+        async delete() {},
+      }),
     );
 
     assert.equal(pinned, true);
     assert.equal(event.messageId, "message");
     assert.equal(store.getEvent(event.id)?.messageId, "message");
-    assert.equal(calendarFilename, `community-picnic-${event.id}.ics`);
   });
 
   it("cleans up the message and scheduled event when pinning fails", async () => {

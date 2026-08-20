@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, type APIEmbedField } from "discord.js";
 import { buildRsvpButtons, buildRsvpFields } from "../../../shared/rsvp.js";
+import { eventCalendarUrl } from "../calendar.js";
 import { formatEventSchedule, isEventEnded } from "../schedule.js";
 import type { CommunityEvent } from "../types.js";
 
@@ -16,6 +17,8 @@ export function renderEvent(event: CommunityEvent) {
       inline: true,
     });
   }
+
+  details.push({ name: "Calendar", value: `[Add to Google Calendar](${eventCalendarUrl(event)})`, inline: true });
 
   const embed = new EmbedBuilder()
     .setColor(closed ? 0x747f8d : 0x5865f2)

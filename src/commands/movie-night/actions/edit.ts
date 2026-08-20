@@ -19,9 +19,7 @@ export async function editMovieNight(
 
   await updateScheduledEvent(client, updated);
   await store.set(updated);
-  const refreshCalendar = edits.startsAt !== undefined || edits.durationMinutes !== undefined;
-
-  await messages.updateAll(updated, refreshCalendar);
+  await messages.updateAll(updated);
 
   return updated;
 }

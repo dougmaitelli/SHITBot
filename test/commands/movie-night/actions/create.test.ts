@@ -13,7 +13,6 @@ describe("createMovieNight", () => {
       scheduledEvents: { create: async () => ({ id: "scheduled" }) },
     } as unknown as Guild;
     let pinned = false;
-    let calendarFilename: string | undefined;
 
     await store.load();
     const night = await createMovieNight(
@@ -28,22 +27,17 @@ describe("createMovieNight", () => {
         location: "Theater",
         movie: "Arrival",
       },
-      async (options) => {
-        calendarFilename = options.files?.[0]?.name;
-
-        return {
-          id: "message",
-          async pin() {
-            pinned = true;
-          },
-          async delete() {},
-        };
-      },
+      async () => ({
+        id: "message",
+        async pin() {
+          pinned = true;
+        },
+        async delete() {},
+      }),
     );
 
     assert.equal(pinned, true);
     assert.equal(night.messageId, "message");
     assert.equal(store.get(night.id)?.messageId, "message");
-    assert.equal(calendarFilename, `movie-night-arrival-${night.id}.ics`);
   });
 });

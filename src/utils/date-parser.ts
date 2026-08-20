@@ -190,6 +190,13 @@ export function formatCalendarDate(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
+export function formatUtcDateTime(timestamp: number): string {
+  return new Date(timestamp * 1000)
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
+}
+
 export function parseEventEnd(input: string, timeZone: string, startsAt: number, fullDay: boolean): number | null {
   const eventDate = new Date(startsAt * 1000);
 

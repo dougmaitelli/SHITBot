@@ -28,7 +28,6 @@ describe("editCommunityEvent", () => {
 
     let scheduledName: unknown;
     let renderedName: string | undefined;
-    let refreshedCalendar = false;
     const guild = {
       scheduledEvents: {
         edit: async (_id: string, changes: Record<string, unknown>) => {
@@ -38,9 +37,8 @@ describe("editCommunityEvent", () => {
     } as unknown as Guild;
     const client = { guilds: { fetch: async () => guild } } as unknown as Client;
     const messages: EventMessageService = {
-      async update(updated, refreshCalendar) {
+      async update(updated) {
         renderedName = updated.name;
-        refreshedCalendar = refreshCalendar ?? false;
       },
       async reconcilePin() {},
     };
@@ -51,12 +49,5 @@ describe("editCommunityEvent", () => {
     assert.equal(scheduledName, "New name");
     assert.equal(store.getEvent(event.id)?.name, "New name");
     assert.equal(renderedName, "New name");
-    assert.equal(refreshedCalendar, false);
-
-    await editCommunityEvent(client, store, messages, updated, {
-      schedule: { type: "timed", startsAt: 4_102_448_400, endsAt: 4_102_459_200 },
-    });
-
-    assert.equal(refreshedCalendar, true);
   });
 });

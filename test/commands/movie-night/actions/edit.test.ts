@@ -32,7 +32,6 @@ describe("editMovieNight", () => {
 
     let scheduledLocation: unknown;
     let renderedLocation: string | undefined;
-    let refreshedCalendar = false;
     const guild = {
       scheduledEvents: {
         edit: async (_id: string, changes: Record<string, unknown>) => {
@@ -42,9 +41,8 @@ describe("editMovieNight", () => {
     } as unknown as Guild;
     const client = { guilds: { fetch: async () => guild } } as unknown as Client;
     const messages = {
-      async updateAll(updated: MovieNight, refreshCalendar?: boolean) {
+      async updateAll(updated: MovieNight) {
         renderedLocation = updated.location;
-        refreshedCalendar = refreshCalendar ?? false;
       },
     } as MovieNightMessageService;
 
@@ -54,10 +52,5 @@ describe("editMovieNight", () => {
     assert.equal(scheduledLocation, "New place");
     assert.equal(store.get(night.id)?.location, "New place");
     assert.equal(renderedLocation, "New place");
-    assert.equal(refreshedCalendar, false);
-
-    await editMovieNight(client, store, messages, updated, { startsAt: 4_102_448_400 });
-
-    assert.equal(refreshedCalendar, true);
   });
 });
