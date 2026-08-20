@@ -1,10 +1,11 @@
+import { eventCalendarAttachment } from "../../shared/calendar.js";
 import { renderEvent } from "./renderers/event.js";
 import { isEventClosed } from "./status.js";
 import type { CommunityEvent } from "./types.js";
 import type { Client } from "discord.js";
 
 export interface EventMessageService {
-  update(event: CommunityEvent): Promise<void>;
+  update(event: CommunityEvent, refreshCalendar?: boolean): Promise<void>;
   reconcilePin(event: CommunityEvent): Promise<void>;
 }
 
@@ -18,12 +19,18 @@ export function createEventMessageService(client: Client): EventMessageService {
   }
 
   return {
-    async update(event): Promise<void> {
+    async update(event, refreshCalendar = false): Promise<void> {
       const message = await getMessage(event);
 
       if (!message) return;
 
-      await Promise.all([message.edit(renderEvent(event)), ...(event.closedAt ? [message.unpin()] : [])]);
+      await Promise.all([
+        message.edit({
+          ...renderEvent(event),
+          ...(refreshCalendar ? { attachments: [], files: [eventCalendarAttachment(event)] } : {}),
+        }),
+        ...(event.closedAt ? [message.unpin()] : []),
+      ]);
     },
     async reconcilePin(event): Promise<void> {
       const message = await getMessage(event);

@@ -19,7 +19,9 @@ export async function editCommunityEvent(
 
   await updateScheduledEvent(client, updated);
   await store.setEvent(updated);
-  await messages.update(updated);
+  const refreshCalendar = edits.schedule !== undefined;
+
+  await messages.update(updated, refreshCalendar);
 
   return updated;
 }

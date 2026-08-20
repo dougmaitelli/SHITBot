@@ -37,6 +37,14 @@ const createEventCommand: CommandFactory = (context): CommandModule => {
     },
     async onReady(): Promise<void> {
       for (const event of store.listEvents()) {
+        await messages.update(event, true).catch((error) =>
+          logger.warn("Could not reconcile event calendar attachment", {
+            error,
+            eventId: event.id,
+            channelId: event.channelId,
+            messageId: event.messageId,
+          }),
+        );
         await messages.reconcilePin(event).catch((error) =>
           logger.warn("Could not reconcile event message pin", {
             error,

@@ -62,6 +62,14 @@ const createMovieNightCommand: CommandFactory = (context): CommandModule => {
     },
     async onReady(): Promise<void> {
       for (const night of store.list()) {
+        await messages.updateNight(night, true).catch((error) =>
+          logger.warn("Could not reconcile movie-night calendar attachment", {
+            error,
+            nightId: night.id,
+            channelId: night.channelId,
+            messageId: night.messageId,
+          }),
+        );
         await messages.reconcilePin(night).catch((error) =>
           logger.warn("Could not reconcile movie-night message pin", {
             error,

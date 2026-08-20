@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { eventCalendarAttachment } from "../../../shared/calendar.js";
 import { renderEvent } from "../renderers/event.js";
 import type { ManagedMessage } from "../../../shared/managed-message.js";
 import type { BotStore } from "../../../store.js";
 import type { CommunityEvent } from "../types.js";
-import type { GuildScheduledEvent } from "discord.js";
+import type { AttachmentPayload, GuildScheduledEvent } from "discord.js";
 
 export interface AdoptCommunityEventInput {
   guildId: string;
@@ -12,7 +13,9 @@ export interface AdoptCommunityEventInput {
   attendanceLimit?: number;
 }
 
-type SendEventMessage = (options: ReturnType<typeof renderEvent>) => Promise<ManagedMessage>;
+type SendEventMessage = (
+  options: ReturnType<typeof renderEvent> & { files?: AttachmentPayload[] },
+) => Promise<ManagedMessage>;
 
 export function parseScheduledEventReference(value: string, guildId: string): string {
   const reference = value.trim();
@@ -71,7 +74,7 @@ export async function adoptCommunityEvent(
   let message: Awaited<ReturnType<SendEventMessage>> | undefined;
 
   try {
-    message = await sendMessage(renderEvent(event));
+    message = await sendMessage({ ...renderEvent(event), files: [eventCalendarAttachment(event)] });
     event.messageId = message.id;
     await message.pin();
     await store.setEvent(event);

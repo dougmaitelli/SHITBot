@@ -1,3 +1,4 @@
+import { movieNightCalendarAttachment } from "../../shared/calendar.js";
 import { renderNight } from "./renderers/night.js";
 import { renderSuggestion } from "./renderers/suggestion.js";
 import { isMovieNightClosed } from "./status.js";
@@ -5,11 +6,11 @@ import type { MovieNight, MovieSuggestion } from "./types.js";
 import type { Client } from "discord.js";
 
 export interface MovieNightMessageService {
-  updateNight(night: MovieNight): Promise<void>;
+  updateNight(night: MovieNight, refreshCalendar?: boolean): Promise<void>;
   sendSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<string>;
   updateSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<void>;
   updateSuggestions(night: MovieNight): Promise<void>;
-  updateAll(night: MovieNight): Promise<void>;
+  updateAll(night: MovieNight, refreshCalendar?: boolean): Promise<void>;
   reconcilePin(night: MovieNight): Promise<void>;
   deleteSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<void>;
   deleteSuggestions(night: MovieNight): Promise<void>;
@@ -22,14 +23,20 @@ export function createMovieNightMessageService(client: Client): MovieNightMessag
     return channel?.isTextBased() && !channel.isDMBased() ? channel : undefined;
   }
 
-  async function updateNight(night: MovieNight): Promise<void> {
+  async function updateNight(night: MovieNight, refreshCalendar = false): Promise<void> {
     const channel = await getChannel(night);
 
     if (!channel) return;
 
     const message = await channel.messages.fetch(night.messageId);
 
-    await Promise.all([message.edit(renderNight(night)), ...(night.closedAt ? [message.unpin()] : [])]);
+    await Promise.all([
+      message.edit({
+        ...renderNight(night),
+        ...(refreshCalendar ? { attachments: [], files: [movieNightCalendarAttachment(night)] } : {}),
+      }),
+      ...(night.closedAt ? [message.unpin()] : []),
+    ]);
   }
 
   async function sendSuggestion(night: MovieNight, suggestion: MovieSuggestion): Promise<string> {
@@ -66,8 +73,8 @@ export function createMovieNightMessageService(client: Client): MovieNightMessag
     await Promise.allSettled(night.suggestions.map((suggestion) => updateSuggestion(night, suggestion)));
   }
 
-  async function updateAll(night: MovieNight): Promise<void> {
-    await updateNight(night);
+  async function updateAll(night: MovieNight, refreshCalendar = false): Promise<void> {
+    await updateNight(night, refreshCalendar);
     await updateSuggestions(night);
   }
 
